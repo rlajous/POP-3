@@ -1,4 +1,0 @@
-/home/francisco/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/182.4505.18/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/francisco/itba/2c2018/protos/protos-2018b-07/src
--- Configuring done
--- Generating done
--- Build files have been written to: /home/francisco/itba/2c2018/protos/protos-2018b-07/src/cmake-build-debug
