@@ -7,6 +7,42 @@
 
 #include "buffer.h"
 
+enum pop3_state {
+    /**
+     * Recibe el hello del cliente y lo procesa
+     *
+     * Intereses:
+     *      - OP_READ sobre el client_fd
+     *
+     * Transiciones:
+     *      - HELLO_READ     mientras el mensaje no esté completo
+     *      - HELLO_WRITE    cuando está completo
+     *      - ERROR          abte cuyalquier error (IO/parseo)
+     * */
+    HELLO_READ,
+
+    /**
+     * envía la respuesta del `hello' al cliente.
+     *
+     * Intereses:
+     *      - OP_WRITE sobre client_fd
+     *
+     * Transiciones:
+     *      - HELLO_WRITE  mientras queden bytes por enviar
+     *      - REQUEST_READ cuando se enviaron todos los bytes
+     *      - ERROR        ante cualquier error (IO/parseo)
+     */
+    HELLO_WRITE,
+
+    TRANSACTION_READ_CLIENT,
+    TRANSACTION_RESOLV,
+    TRANSACTION_WRITE_ORIGIN_SERVER,
+    TRANSACTION_READ_ORIGIN_SERVER,
+    TRANSACTION_
+
+};
+
+
 
 struct hello_st {
     buffer              *rb, *wb;
@@ -14,19 +50,19 @@ struct hello_st {
 };
 
 struct auth_st {
-    buffer                      *rb, *wb;
-
-    struct request              request;
-    struct authorization_parser parser;
-
-    enum pop_response_status    status;
-
-    struct sockaddr_storage   *origin_addr;
-    socklen_t                 *origin_addr_len;
-    int                       *origin_domain;
-
-    const int                 *client_fd;
-    int                       *origin_fd;
+//    buffer                      *rb, *wb;
+//
+//    struct request              request;
+//    struct authorization_parser parser;
+//
+//    enum pop_response_status    status;
+//
+//    struct sockaddr_storage   *origin_addr;
+//    socklen_t                 *origin_addr_len;
+//    int                       *origin_domain;
+//
+//    const int                 *client_fd;
+//    int                       *origin_fd;
 };
 
 struct transaction_st {
@@ -57,9 +93,9 @@ struct pop3 {
     /** estados para el client_fd */
     union {
         struct hello_st hello;
-        struct auth_st auth;
-        struct transaction_st transaction;
-        struct update_st update;
+//        struct auth_st auth;
+//        struct transaction_st transaction;
+//        struct update_st update;
     } client;
     /** estados para el origin_fd */
     union {
