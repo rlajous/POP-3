@@ -4,8 +4,14 @@
 #include <bits/socket.h>
 #include <sys/socket.h>
 #include <stdint.h>
+#include <string.h>
+#include <netdb.h>
 
-#include "buffer.h"
+#include "../utils/buffer.h"
+#include "../utils/stm.h"
+#include "../utils/selector.h"
+
+#define N(x) (sizeof(x)/sizeof((x)[0]))
 
 enum pop3_state {
     /**
@@ -34,11 +40,8 @@ enum pop3_state {
      */
     HELLO_WRITE,
 
-    TRANSACTION_READ_CLIENT,
-    TRANSACTION_RESOLV,
-    TRANSACTION_WRITE_ORIGIN_SERVER,
-    TRANSACTION_READ_ORIGIN_SERVER,
-    TRANSACTION_
+
+    ERROR
 
 };
 
@@ -100,12 +103,10 @@ struct pop3 {
     /** estados para el origin_fd */
     union {
         struct hello_st hello;
-        struct auth_st auth;
-        struct transaction_st transaction;
-        struct update_st update;
     } orig;
 
     /** buffers para ser usados read_buffer, write_buffer.*/
+    //TODO: Aca se deberia modificar el tamaño del buffer en tiempo de ejecución creo
     uint8_t raw_buff_a[2048], raw_buff_b[2048];
     buffer read_buffer, write_buffer;
 
@@ -117,6 +118,100 @@ struct pop3 {
 
 };
 
+/**
+ * Pool de `struct socks5', para ser reusados.
+ *
+ * Como tenemos un unico hilo que emite eventos no necesitamos barreras de
+ * contención.
+ */
+
+static const unsigned  max_pool  = 50; // tamaño máximo
+static unsigned        pool_size = 0;  // tamaño actual
+static struct pop3 * pool      = 0;  // pool propiamente dicho
+
+
+static const struct state_definition *
+pop3_describe_states(void);
+
+/**
+ *
+ * */
+static struct pop3 * pop3_new(int client_fd){
+    struct pop3 * ret;
+
+    if(pool == NULL){
+        ret = malloc(sizeof(*ret));
+    } else {
+        ret = pool;
+        pool = pool->next;
+        ret->next = 0;
+    }
+
+    if(ret == NULL){
+        goto finally;
+    }
+    memset(ret, 0x00, sizeof(*ret));
+
+    ret->origin_fd          = -1;
+    ret->client_fd          = client_fd;
+    ret->client_addr_len    = sizeof(ret->client_addr);
+
+    ret->stm    .initial    = HELLO_READ;
+    ret->stm    .max_state  = ERROR;
+    ret->stm    .states     = pop3_describe_states();
+    stm_init(&ret->stm);
+
+    buffer_init(&ret->read_buffer,N(ret->raw_buff_a), ret->raw_buff_a);
+    buffer_init(&ret->write_buffer, N(ret->raw_buff_b), ret->raw_buff_b);
+
+
+finally:
+    return ret;
+
+}
+
+
+/** Realmente destruye */
+static void
+pop3_destroy_(struct pop3* p){
+    if(p->origin_resolution != NULL){
+        freeaddrinfo(p->origin_resolution);
+        p->origin_resolution = 0;
+    }
+    free(p);
+}
+
+/** Destruye el struct pop3, tiene en cuenta las referencias y el pool de objetos */
+static void
+pop3_destroy(struct pop3* p){
+    if(p == NULL){
+        //nada que hacer
+    } else if (p->references == 1){
+        if(p != NULL){
+            if(pool_size < max_pool){
+                p->next = pool;
+                pool = p;
+                pool_size++;
+            } else {
+                pop3_destroy_(p);
+            }
+        }
+    } else {
+        p->references = -1;
+    }
+}
+
+void
+pop3_pool_destroy(void){
+    struct pop3 * next, *p;
+    for(p = pool; p != NULL; p = next){
+        next = p->next;
+        free(p);
+    }
+}
+
+
+
 void
 proxyPop3_passive_accept(struct selector_key *key){
     struct sockaddr_storage         client_addr;
@@ -125,4 +220,10 @@ proxyPop3_passive_accept(struct selector_key *key){
 
     const int client = accept(key->fd, (struct sockaddr*) &client_addr,
                               &client_addr_len);
+}
+
+
+static const struct state_definition *
+pop3_describe_states(){
+    return NULL;
 }
