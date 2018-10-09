@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 add_executable(proxyPop main.c
-                        selector.c
-                        selector.h
-                        proxyPop3nio.c proxyPop3nio.h request.c request.h)
+        utils/selector.c
+        utils/stm.c
+        utils/buffer.c
+        proxy/proxyPop3nio.c
+        request.c)
