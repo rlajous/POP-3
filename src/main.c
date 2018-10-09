@@ -8,8 +8,8 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-#include "selector.h"
-#include "proxyPop3nio.h"
+#include "utils/selector.h"
+#include "proxy/proxyPop3nio.h"
 
 static bool done = false;
 
