@@ -14,6 +14,7 @@
 #define LOOPBACK "127.0.0.1"
 #define DEFAULT_REPLACEMENT_MESSAGE "Parte Reemplazada."
 #define DEFAULT_ERROR_FILE "/dev/null"
+#define VERSION "0.0.1"
 
 static void
 print_usage() {
@@ -46,8 +47,8 @@ print_usage() {
 }
 
 static void
-print_version() {
-  printf("Proxy Pop3 version 1.0\n");
+print_version(arguments arguments) {
+  printf("Proxy Pop3 version %s\n", arguments->version);
 }
 
 static void
@@ -127,6 +128,8 @@ init_arguments() {
   ret->filter_error_file  = DEFAULT_ERROR_FILE;
   //Todo: MediaTypes
 
+  ret->version = VERSION;
+
   return ret;
 }
 
@@ -171,7 +174,7 @@ parse_arguments(const int argc, char * const* argv) {
         add_command(ret, optarg);
         break;
       case 'v':
-        print_version();
+        print_version(ret);
         exit(0);
       case '?':
         if (optopt == 'e' || optopt == 'l' || optopt == 'L'

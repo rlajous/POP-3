@@ -5,22 +5,24 @@
 
 typedef struct args {
     /** Origin address and port */
-    char * origin_address;
+    char    *origin_address;
     uint16_t origin_port;
 
     /** Pop3 listen address and port */
-    char * pop3_address;
+    char    *pop3_address;
     uint16_t pop3_port;
 
     /** SCTP configuration address and port */
-    char * config_address;
+    char    *config_address;
     uint16_t config_port;
 
     /** Filters */
     //TODO: Add MediaTypes
-    char * command;
-    char * message;
-    char * filter_error_file;
+    char *command;
+    char *message;
+    char *filter_error_file;
+
+    char *version;
 } args;
 
 typedef args * arguments;
