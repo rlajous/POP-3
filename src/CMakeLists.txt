@@ -5,4 +5,4 @@ add_executable(proxyPop main.c
         utils/stm.c
         utils/buffer.c
         proxy/proxyPop3nio.c
-        request.c)
+        utils/request.c)
