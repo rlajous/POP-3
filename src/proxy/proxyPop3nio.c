@@ -210,8 +210,21 @@ pop3_pool_destroy(void){
     }
 }
 
+/** obtiene el struct (pop3 *) desde la llave de selección  */
+#define ATTACHMENT(key) ( (struct socks5 *)(key)->data)
 
+static void pop3_read   (struct selector_key *key);
+static void pop3_write  (struct selector_key *key);
+static void pop3_block  (struct selector_key *key);
+static void pop3_close  (struct selector_key *key);
+static const struct fd_handler pop3_handler = {
+        .handle_read   = pop3_read,
+        .handle_write  = pop3_write,
+        .handle_close  = pop3_close,
+        .handle_block  = pop3_block,
+};
 
+/** Intenta aceptar la nueva conexión entrante */
 void
 proxyPop3_passive_accept(struct selector_key *key){
     struct sockaddr_storage         client_addr;
@@ -220,6 +233,32 @@ proxyPop3_passive_accept(struct selector_key *key){
 
     const int client = accept(key->fd, (struct sockaddr*) &client_addr,
                               &client_addr_len);
+    if(client == -1){
+        goto fail;
+    }
+    if(selector_fd_set_nio(client == -1)){
+        goto fail;
+    }
+    state = pop3_new(client);
+    if(state == NULL){
+        //Posible mejora: Apagar el accept hasta que se libere
+        // una conexion para ahorrar recursos.
+        goto fail;
+    }
+
+    memcpy(&state->client_addr, &client_addr, client_addr_len);
+    state->client_addr_len = client_addr_len;
+
+    if(SELECTOR_SUCCESS != selector_register(key->s, client, &pop3_handler, OP_READ, state)){
+        goto fail;
+    }
+    return;
+
+fail:
+    if(client != -1){
+        close(client);
+    }
+    pop3_destroy(state);
 }
 
 
