@@ -8,6 +8,13 @@
 
 #include "proxyArguments.h"
 
+#define DEFAULT_ORIGIN_PORT 110
+#define DEFAULT_PROXY_PORT 1110
+#define DEFAULT_CONFIG_PORT 9090
+#define LOOPBACK "127.0.0.1"
+#define DEFAULT_REPLACEMENT_MESSAGE "Parte Reemplazada."
+#define DEFAULT_ERROR_FILE "/dev/null"
+
 static void
 print_usage() {
   printf("Proxy POP3 implementation \n");
@@ -107,17 +114,17 @@ init_arguments() {
   arguments ret           = malloc(sizeof(args));
 
   ret->origin_address     = NULL;
-  ret->origin_port        = 110;
+  ret->origin_port        = DEFAULT_ORIGIN_PORT;
 
   ret->pop3_address       = NULL;
-  ret->pop3_port          = 1110;
+  ret->pop3_port          = DEFAULT_PROXY_PORT;
 
-  ret->config_address     = "127.0.0.1";
-  ret->config_port        = 9090;
+  ret->config_address     = LOOPBACK;
+  ret->config_port        = DEFAULT_CONFIG_PORT;
 
   ret->command            = NULL;
-  ret->message            = "Parte Reemplazada.";
-  ret->filter_error_file  = "/dev/null";
+  ret->message            = DEFAULT_REPLACEMENT_MESSAGE;
+  ret->filter_error_file  = DEFAULT_ERROR_FILE;
   //Todo: MediaTypes
 
   return ret;
