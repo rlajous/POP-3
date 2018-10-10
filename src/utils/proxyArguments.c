@@ -110,6 +110,7 @@ parse_port(const char * port) {
 }
 
 /** Default values*/
+//TODO: allocate default values
 static arguments
 init_arguments() {
   arguments ret           = malloc(sizeof(args));

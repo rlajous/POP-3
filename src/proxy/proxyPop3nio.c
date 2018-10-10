@@ -1,7 +1,6 @@
 
 
 #include <stdlib.h>
-#include <bits/socket.h>
 #include <sys/socket.h>
 #include <stdint.h>
 #include <string.h>
@@ -14,38 +13,15 @@
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 enum pop3_state {
-    /**
-     * Recibe el hello del cliente y lo procesa
-     *
-     * Intereses:
-     *      - OP_READ sobre el client_fd
-     *
-     * Transiciones:
-     *      - HELLO_READ     mientras el mensaje no esté completo
-     *      - HELLO_WRITE    cuando está completo
-     *      - ERROR          abte cuyalquier error (IO/parseo)
-     * */
-    HELLO_READ,
-
-    /**
-     * envía la respuesta del `hello' al cliente.
-     *
-     * Intereses:
-     *      - OP_WRITE sobre client_fd
-     *
-     * Transiciones:
-     *      - HELLO_WRITE  mientras queden bytes por enviar
-     *      - REQUEST_READ cuando se enviaron todos los bytes
-     *      - ERROR        ante cualquier error (IO/parseo)
-     */
-    HELLO_WRITE,
-
-
-    ERROR
-
+    CONNECTING,
+    REQUEST_READ,
+    REQUEST_WRITE,
+    RESPONSE_READ,
+    RESPONSE_WRITE,
+    COMMIT,
+    QUIT,
+    ERROR,
 };
-
-
 
 struct hello_st {
     buffer              *rb, *wb;
