@@ -10,8 +10,10 @@
 
 #include "utils/selector.h"
 #include "proxy/proxyPop3nio.h"
+#include "utils/proxyArguments.h"
 
 static bool done = false;
+arguments proxyArguments;
 
 static void
 sigterm_handler(const int signal){
@@ -19,25 +21,9 @@ sigterm_handler(const int signal){
     done = true;
 }
 
-main(const int argc, const char **argv){
-    unsigned port = 1080;
-
-    if(argc == 1){
-
-    } else if(argc == 2){
-        char *end = 0;
-        const long sl = strtol(argv[1], &end, 10);
-        if (end == argv[1]|| '\0' != *end
-            || ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
-            || sl < 0 || sl > USHRT_MAX) {
-            fprintf(stderr, "port should be an integer: %s\n", argv[1]);
-            return 1;
-        }
-        port = sl;
-    } else {
-        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-        return 1;
-    }
+int
+main(const int argc, char * const *argv){
+    proxyArguments = parse_arguments(argc, argv);
 
     close(0);
 
@@ -49,14 +35,14 @@ main(const int argc, const char **argv){
     memset(&addr, 0, sizeof(addr));
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port        = htons(port);
+    addr.sin_port        = htons(proxyArguments->pop3_port);
 
     const int server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(server < 0){
         err_msg = "unable to create socket";
         goto finally;
     }
-    fprintf(stdout, "Listening on TCP port %d\n", port);
+    fprintf(stdout, "Listening on TCP port %d\n", proxyArguments->pop3_port);
 
     setsockopt(server, SOL_SOCKET,SO_REUSEADDR,&(int){1}, sizeof(int));
 
@@ -134,7 +120,7 @@ finally:
     }
     selector_close();
 
-    proxyPop3_pool_destoy();
+    pop3_pool_destroy();
 
     if(server >= 0) {
         close(server);

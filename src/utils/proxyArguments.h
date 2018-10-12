@@ -30,4 +30,7 @@ typedef args * arguments;
 arguments
 parse_arguments(int argc, char * const * argv);
 
+void
+destroy_arguments(arguments args);
+
 #endif

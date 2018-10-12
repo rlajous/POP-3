@@ -5,6 +5,6 @@ void
 proxyPop3_passive_accept(struct selector_key *key);
 
 void
-proxyPop3_pool_destoy(void);
+pop3_pool_destroy(void);
 
 #endif

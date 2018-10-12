@@ -67,7 +67,7 @@ add_message(const int messages, const char *optarg, arguments args) {
     message = strcat(message, "\n");
     message = strncat(message, optarg, length + 1);
   } else {
-    message = malloc(length + 1);
+    message = realloc(args->message, length + 1);
     if(NULL == message) {
       fprintf(stderr, "Error: No memory available\n");
       exit(1);
@@ -75,21 +75,6 @@ add_message(const int messages, const char *optarg, arguments args) {
     strncpy(message, optarg, length + 1);
   }
   args->message = message;
-}
-
-static void
-add_command(arguments arguments, const char * command) {
-
-  size_t length       = strlen(command) + 1;
-  char  *new_command  = malloc(length);
-
-  if (NULL == new_command) {
-    fprintf(stderr, "Error: No memory available\n");
-    exit(1);
-  }
-
-  strncpy(new_command, command, length + 1);
-  arguments->command = new_command;
 }
 
 /** Extracted from Juan F. Codagnone's code*/
@@ -109,8 +94,31 @@ parse_port(const char * port) {
   return (uint16_t) sl;
 }
 
+static char *
+init_default_string(const char * string) {
+  size_t size = strlen(string);
+  char  *aux  = malloc(size + 1);
+  if(NULL == aux) {
+    fprintf(stderr, "Error: No memory available\n");
+    exit(1);
+  }
+  strncpy(aux, string, size + 1);
+  return aux;
+}
+
+static char *
+modify_string(char * old_string, const char * new_string) {
+  size_t size = strlen(new_string);
+  char  *aux  = realloc(old_string, size +1);
+  if(NULL == aux) {
+    fprintf(stderr, "Error: No memory available\n");
+    exit(1);
+  }
+  strncpy(aux, new_string, size + 1);
+  return aux;
+}
+
 /** Default values*/
-//TODO: allocate default values
 static arguments
 init_arguments() {
   arguments ret           = malloc(sizeof(args));
@@ -121,15 +129,15 @@ init_arguments() {
   ret->pop3_address       = NULL;
   ret->pop3_port          = DEFAULT_PROXY_PORT;
 
-  ret->config_address     = LOOPBACK;
+  ret->config_address     = init_default_string(LOOPBACK);
   ret->config_port        = DEFAULT_CONFIG_PORT;
 
   ret->command            = NULL;
-  ret->message            = DEFAULT_REPLACEMENT_MESSAGE;
-  ret->filter_error_file  = DEFAULT_ERROR_FILE;
+  ret->message            = init_default_string(DEFAULT_REPLACEMENT_MESSAGE);
+  ret->filter_error_file  = init_default_string(DEFAULT_ERROR_FILE);
   //Todo: MediaTypes
 
-  ret->version = VERSION;
+  ret->version = init_default_string(VERSION);
 
   return ret;
 }
@@ -144,16 +152,16 @@ parse_arguments(const int argc, char * const* argv) {
   while ((option = getopt(argc, argv, "e:hl:L:m:M:o:p:P:t:v")) != -1) {
     switch (option) {
       case 'e':
-        ret->filter_error_file = optarg;
+        ret->filter_error_file = modify_string(ret->filter_error_file, optarg);
         break;
       case 'h':
         print_usage();
         exit(0);
       case 'l':
-        ret->pop3_address = optarg;
+        ret->pop3_address = modify_string(ret->pop3_address, optarg);
         break;
       case 'L':
-        ret->config_address = optarg;
+        ret->config_address = modify_string(ret->config_address, optarg);
         break;
       case 'm':
         add_message(messages, optarg, ret);
@@ -172,7 +180,7 @@ parse_arguments(const int argc, char * const* argv) {
         ret->origin_port = parse_port(optarg);
         break;
       case 't':
-        add_command(ret, optarg);
+        ret->command = modify_string(ret->command, optarg);
         break;
       case 'v':
         print_version(ret);
@@ -207,8 +215,26 @@ parse_arguments(const int argc, char * const* argv) {
     strncpy(address, argv[optind], length + 1);
     ret->origin_address = address;
   } else {
+    fprintf(stderr, "Incorrect usage, please try the following\n");
     print_usage();
     exit(1);
   }
   return ret;
+}
+
+void
+destroy_arguments(arguments args) {
+  if(NULL != args) {
+    if(NULL != args->origin_address)
+      free(args->origin_address);
+    if(NULL != args->pop3_address)
+      free(args->pop3_address);
+    if(NULL != args->command)
+      free(args->command);
+    free(args->config_address);
+    free(args->message);
+    free(args->filter_error_file);
+    free(args->version);
+    free(args);
+  }
 }
