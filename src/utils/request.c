@@ -25,7 +25,7 @@ remaining_is_done(struct request_parser* p) {
  *      - false otherwise
  */
 bool
-request_identify_cmd(struct request_parser* p){
+request_identify_cmd(struct request_parser* p) {
 
     for(int i = 0; i < 9 ; i++){
         if(0 == strcmp(p->cmd_buffer, POP3_CMDS_INFO[i].string_representation)){
@@ -36,30 +36,45 @@ request_identify_cmd(struct request_parser* p){
     return false;
 }
 
+bool
+hast_minimum_nargs(struct request_parser *p) {
+    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].min_args;
+}
+
+bool has_maximum_nargs(struct request_parser *p) {
+    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].max_args;
+}
+
 enum request_state
-request_parse_cmd(struct request_parser* p, const uint8_t c){
+request_parse_cmd(struct request_parser* p, const uint8_t c) {
+
+    /** Arguments have a max length of 4 chars */
+    if(remaining_is_done(p)){
+        return request_length_error;
+    }
 
     if(c == ' '){
         if(request_identify_cmd(p)){
             remaining_set(p, MAX_ARG_LENGTH);
             return request_arg;
         }
-        return request_error;
+        return request_invalid_cmd_error;
     }
     /** recieve a CR*/
     if(c == '\r'){
-        if(request_identify_cmd(p) && POP3_CMDS_INFO[p->request->cmd].min_args == 0) {
-            return request_CR;
+        if(!request_identify_cmd(p)) {
+            return request_invalid_cmd_error;
         }
-        return request_error;
+        if(!hast_minimum_nargs(p)) {
+            return request_missing_args_error;
+        }
+        remaining_set(p, 1);
+        return request_CR;
+
     }
     /** LF without CR*/
     if(c == '\n'){
-        return request_error;
-    }
-    /** Arguments have a max length of 4 chars */
-    if(remaining_is_done(p)){
-        return request_error;
+        return request_invalid_termination_error;
     }
     
     char append = (char)tolower(c);
@@ -67,17 +82,12 @@ request_parse_cmd(struct request_parser* p, const uint8_t c){
     p->i++;
     return request_cmd;
 }
-
-bool
-validate_nargs(struct request_parser *p){
-    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].min_args;
-}
  
 enum request_state
 request_parse_arg(struct request_parser *p, const uint8_t c){
     /** recieve a CF */
     if(c == '\r'){
-        if(validate_nargs(p)){
+        if(hast_minimum_nargs(p)){
             return request_CR;
         }
         return  request_missing_args_error;
@@ -85,10 +95,10 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
 
     /** LF without CR*/
     if(c == '\n'){
-        return request_error;
+        return request_invalid_termination_error;
     }
 
-    if(p->request->nargs == POP3_CMDS_INFO[p->request->cmd].nargs){
+    if(has_maximum_nargs(p)){
         return request_arg;
     }
     if(c == ' '){

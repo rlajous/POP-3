@@ -25,6 +25,9 @@ enum request_state {
     request_done,
 
     request_error,
+    request_invalid_cmd_error,
+    request_invalid_termination_error,
+    request_length_error,
     request_missing_args_error,
 
 };
@@ -40,7 +43,7 @@ struct request {
 struct pop3_cmd_data {
     char * string_representation;
     enum pop3_req_cmd request_cmd;
-    uint8_t nargs;
+    uint8_t max_args;
     uint8_t min_args;
 };
 
@@ -51,52 +54,52 @@ struct pop3_cmd_data {
 static struct pop3_cmd_data POP3_CMDS_INFO[] ={
         { .request_cmd = stat,
           .string_representation = "stat",
-          .nargs = 0,
+          .max_args = 0,
           .min_args = 0,
         },
         { .request_cmd = list,
           .string_representation = "list",
-          .nargs = 1,
+          .max_args = 1,
           .min_args = 0,
         },
         { .request_cmd = retr,
           .string_representation = "retr",
-          .nargs = 1,
+          .max_args = 1,
           .min_args = 1,
         },
         { .request_cmd = dele,
           .string_representation = "dele",
-          .nargs = 1,
+          .max_args = 1,
           .min_args = 1,
         },
         { .request_cmd = noop,
           .string_representation = "noop",
-          .nargs = 0,
+          .max_args = 0,
           .min_args = 0,
         },
         { .request_cmd = rset,
           .string_representation = "rset",
-          .nargs = 0,
+          .max_args = 0,
           .min_args = 0,
         },
         { .request_cmd = quit,
           .string_representation = "quit",
-          .nargs = 0,
+          .max_args = 0,
           .min_args = 0,
         },
         { .request_cmd = uidl,
           .string_representation = "uidl",
-          .nargs = 1,
+          .max_args = 1,
           .min_args = 0,
         },
         { .request_cmd = top,
           .string_representation = "top",
-          .nargs = 2,
+          .max_args = 2,
           .min_args = 2,
         },
         { .request_cmd = apop,
           .string_representation = "apop",
-          .nargs = 2,
+          .max_args = 2,
           .min_args = 2,
         },
 
