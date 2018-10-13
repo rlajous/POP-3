@@ -1,6 +1,10 @@
 src/cmake-build-debug/
 \.idea/
-
+src/proxyPop
+src/Makefile
+src/CMakeFiles/
+src/CMakeCache.txt
+src/cmake_install.cmake
 cmake-build-debug/
 
 CMakeLists\.txt
