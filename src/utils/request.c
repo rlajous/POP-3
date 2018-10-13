@@ -5,10 +5,8 @@
 #include "request.h"
 #include "buffer.h"
 
-#define MAX_ARG_LENGTH 40
-
 static void
-remaining_set(struct request_parser* p, const int n) {
+remaining_set(struct request_parser* p, const uint8_t n) {
     p->i = 0;
     p->n = n;
 }
@@ -104,7 +102,7 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
     if(c == ' '){
         p->request->nargs++;
         p->request->arg[p->request->nargs-1][p->i] = '\0';
-        remaining_set(p, 40);
+        remaining_set(p, MAX_ARG_LENGTH);
         return request_arg;
     }
     if(!remaining_is_done(p)){

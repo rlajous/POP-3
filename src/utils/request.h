@@ -5,6 +5,10 @@
 
 #include "buffer.h"
 
+#define MAX_CMD_LENGTH 4
+#define MAX_ARG_LENGTH 40
+#define MAX_ARGUMENTS 2
+
 enum pop3_req_cmd{
     stat = 0,
     list,
@@ -34,7 +38,7 @@ enum request_state {
 
 struct request {
     enum pop3_req_cmd   cmd;
-    char                arg[2][41];
+    char                arg[MAX_ARGUMENTS][MAX_ARG_LENGTH + 1];
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
 };
@@ -109,7 +113,7 @@ struct request_parser {
     struct request *request;
     enum request_state state;
     /** Buffer para el comando */
-    char cmd_buffer[4];
+    char cmd_buffer[MAX_CMD_LENGTH + 1];
     /** cuantos bytes tenemos que leer */
     uint8_t n;
     /** cuantos bytes ya leimos */
@@ -147,4 +151,4 @@ void
 request_close(struct request_parser *p);
 
 
-#endif request_H
+#endif
