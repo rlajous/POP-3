@@ -35,7 +35,7 @@ request_identify_cmd(struct request_parser* p) {
 }
 
 bool
-hast_minimum_nargs(struct request_parser *p) {
+has_minimum_nargs(struct request_parser *p) {
     return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].min_args;
 }
 
@@ -63,7 +63,7 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
         if(!request_identify_cmd(p)) {
             return request_invalid_cmd_error;
         }
-        if(!hast_minimum_nargs(p)) {
+        if(!has_minimum_nargs(p)) {
             return request_missing_args_error;
         }
         remaining_set(p, 1);
@@ -85,7 +85,7 @@ enum request_state
 request_parse_arg(struct request_parser *p, const uint8_t c){
     /** recieve a CF */
     if(c == '\r'){
-        if(hast_minimum_nargs(p)){
+        if(has_minimum_nargs(p)){
             return request_CR;
         }
         return  request_missing_args_error;
