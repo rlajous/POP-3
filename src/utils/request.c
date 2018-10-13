@@ -76,8 +76,7 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
     }
     
     char append = (char)tolower(c);
-    strcat(p->cmd_buffer, &append);
-    p->i++;
+    p->cmd_buffer[p->i++] = append;
     return request_cmd;
 }
  
@@ -108,7 +107,6 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
     if(!remaining_is_done(p)){
         char current_char = (char)c;
         p->request->arg[p->request->nargs-1][p->i++] = current_char;
-        p->i++;
         return request_arg;
     } else {
         return request_arg;
@@ -153,6 +151,7 @@ request_parser_feed(struct request_parser* p, const uint8_t c){
 extern void
 request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
+    remaining_set(p, MAX_CMD_LENGTH);
     memset(p->request, 0, sizeof(*(p->request)));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
 }
