@@ -26,43 +26,12 @@ remaining_is_done(struct request_parser* p) {
  */
 bool
 request_identify_cmd(struct request_parser* p){
-    if(0 == strcmp(p->cmd_buffer, "stat")){
-        p->cmd = stat;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "list")){
-        p->cmd = list;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "retr")){
-        p->cmd = retr;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "dele")){
-        p->cmd = dele;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "noop")){
-        p->cmd = noop;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "rset")){
-        p->cmd = rset;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "uidl")){
-        p->cmd = uidl;
-    }
-    else if(0 == strcmp(p->cmd_buffer, "quit")){
-        p->cmd = quit;
-    } else {
-        return false;
-    }
-    return true;
-}
 
-/** returns true if the command can have no arguments */
-bool
-no_arg_method(struct request_parser *p){
-    if(p->cmd == NULL || p->cmd == stat || p->cmd == list ||
-        p->cmd == noop || p->cmd == rset || p->cmd == quit
-        || p->cmd == uidl)
-    {
-        return true;
+    for(int i = 0; i < 9 ; i++){
+        if(0 == strcmp(p->cmd_buffer, POP3_CMDS_INFO[i].string_representation)){
+            p->request->cmd = POP3_CMDS_INFO[i].request_cmd;
+            return true;
+        }
     }
     return false;
 }
@@ -70,7 +39,7 @@ no_arg_method(struct request_parser *p){
 enum request_state
 request_parse_cmd(struct request_parser* p, const uint8_t c){
 
-    if(c == " "){
+    if(c == ' '){
         if(request_identify_cmd(p)){
             remaining_set(p, MAX_ARG_LENGTH);
             return request_arg;
@@ -78,14 +47,14 @@ request_parse_cmd(struct request_parser* p, const uint8_t c){
         return request_error;
     }
     /** recieve a CR*/
-    if(c == 0x0D){
-        if(request_identify_cmd(p) && no_arg_method(p)) {
+    if(c == '\r'){
+        if(request_identify_cmd(p) && POP3_CMDS_INFO[p->request->cmd].min_args == 0) {
             return request_CR;
         }
         return request_error;
     }
     /** LF without CR*/
-    if(c == 0x0A){
+    if(c == '\n'){
         return request_error;
     }
     /** Arguments have a max length of 4 chars */
@@ -99,30 +68,48 @@ request_parse_cmd(struct request_parser* p, const uint8_t c){
     return request_cmd;
 }
 
+bool
+validate_nargs(struct request_parser *p){
+    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].min_args;
+}
  
 enum request_state
-request_parse_arg(struct request_parser* p, const uint8_t c){
+request_parse_arg(struct request_parser *p, const uint8_t c){
     /** recieve a CF */
-    if(c == 0x0D){
-        return request_CR;
-    }
-    if(no_arg_method(p)){
-        return request_arg;
-    } else {
-        if(!remaining_is_done(p)){
-            char current_char = (char)c;
-            strcat(p->request->arg, &current_char);
-            p->i++;
-        } else {
-            return request_arg;
+    if(c == '\r'){
+        if(validate_nargs(p)){
+            return request_CR;
         }
+        return  request_missing_args_error;
     }
 
+    /** LF without CR*/
+    if(c == '\n'){
+        return request_error;
+    }
+
+    if(p->request->nargs == POP3_CMDS_INFO[p->request->cmd].nargs){
+        return request_arg;
+    }
+    if(c == ' '){
+        p->request->nargs++;
+        p->request->arg[p->request->nargs-1][p->i] = '\0';
+        remaining_set(p, 40);
+        return request_arg;
+    }
+    if(!remaining_is_done(p)){
+        char current_char = (char)c;
+        p->request->arg[p->request->nargs-1][p->i++] = current_char;
+        p->i++;
+        return request_arg;
+    } else {
+        return request_arg;
+    }
 }
 
 enum request_state
 request_parse_LF(struct request_parser* p, const uint8_t c){
-    if(c == 0x0A){
+    if(c == '\n'){
         return request_done;
     }
     return request_error;
@@ -144,6 +131,7 @@ request_parser_feed(struct request_parser* p, const uint8_t c){
             break;
         case request_done:
         case request_error:
+        case request_missing_args_error:
             next = p->state;
             break;
         default:
