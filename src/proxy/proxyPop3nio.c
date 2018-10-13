@@ -11,6 +11,7 @@
 #include "../utils/stm.h"
 #include "../utils/selector.h"
 #include "../utils/proxyArguments.h"
+#include "../utils/request.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -32,6 +33,14 @@ enum pop3_state {
 
 struct hello_st {
     buffer              *wb;
+};
+
+struct request_st {
+    buffer                  *wb, *rb;
+
+    struct request          request;
+    struct request_parser   parser;
+
 };
 
 struct pop3 {
@@ -57,6 +66,7 @@ struct pop3 {
     /** estados para el client_fd */
     union {
         struct hello_st hello;
+        struct request_st request;
     } client;
     /** estados para el origin_fd */
     union {
@@ -420,7 +430,9 @@ connecting(struct selector_key *key) {
 }
 
 
-/** HELLO */
+////////////////////////////////////////////////////////////////////////////////
+// HELLO
+////////////////////////////////////////////////////////////////////////////////
 
 static void
 hello_init(const unsigned state, struct selector_key *key) {
@@ -485,6 +497,33 @@ hello_write(struct selector_key *key) {
     return ret;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// REQUEST
+////////////////////////////////////////////////////////////////////////////////
+
+/** inicializa las variables de los estados del REQUEST */
+static void
+request_init(const unsigned state, struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct request_st *d = &p->client.request;
+
+    d->wb              = &(p->write_buffer);
+    d->rb              = &(p->read_buffer);
+    d->parser.request  = &d->request;
+
+}
+
+static unsigned
+request_read(struct slector_key *key) {
+
+}
+
+static void
+request_read_close(const unsigned state, struct selector_key *key) {
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
         {
@@ -500,7 +539,10 @@ static const struct state_definition proxy_states[] = {
                 .on_read_ready    = hello_read,
                 .on_write_ready   = hello_write,
         },{
-                .state            = REQUEST_READ
+                .state            = REQUEST_READ,
+                .on_arrival       = request_init,
+                .on_departure     = request_read_close,
+                .on_read_ready    = request_read,
         },{
                 .state            = REQUEST_WRITE
         },{
@@ -517,6 +559,7 @@ static const struct state_definition proxy_states[] = {
                 .state            = ERROR
         }
 };
+
 static const struct state_definition *
 pop3_describe_states(){
     return proxy_states;
