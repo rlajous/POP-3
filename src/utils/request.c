@@ -156,7 +156,6 @@ request_parser_init(struct request_parser * p) {
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
 }
 
-//TODO(fran): no se bien que es esto del errored
 extern bool
 request_is_done(const enum request_state st, bool* errored) {
     if(st >= request_error && errored != 0) {

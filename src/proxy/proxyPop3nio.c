@@ -36,7 +36,7 @@ struct hello_st {
 };
 
 struct request_st {
-    buffer                  *wb, *rb;
+    buffer                  *origin_buffer, *client_buffer;
 
     struct request          request;
     struct request_parser   parser;
@@ -507,20 +507,57 @@ request_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
     struct request_st *d = &p->client.request;
 
-    d->wb              = &(p->write_buffer);
-    d->rb              = &(p->read_buffer);
+    d->origin_buffer              = &(p->write_buffer);
+    d->client_buffer              = &(p->read_buffer);
     d->parser.request  = &d->request;
 
 }
 
 static unsigned
-request_read(struct slector_key *key) {
+request_process_error(struct selector_key *key, struct request_st *d);
 
+static unsigned
+request_read(struct selector_key *key) {
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+
+    buffer *b     = d->client_buffer;
+    unsigned  ret   = REQUEST_READ;
+    bool  error = false;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(b, &count);
+    n = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        int st = request_consume(b, &d->parser, &error);
+        if(request_is_done(st, 0)) {
+            if(error){
+                buffer_write_adv(b, n);
+                ret = request_process_error(key, d);
+            } else {
+                ret = REQUEST_WRITE;
+            }
+        } else {
+            ret = ERROR;
+        }
+        return error ? ERROR : ret;
+    }
+
+}
+static unsigned
+request_process_error(struct selector_key *key, struct request_st *d) {
+
+    enum request_state st = d->parser.state;
+    //Escribir en el buffer que usa el fd de Response write una response apropiada al error.
+    return RESPONSE_WRITE;
 }
 
 static void
 request_read_close(const unsigned state, struct selector_key *key) {
+    struct request_st * d = &ATTACHMENT(key)->client.request;
 
+    request_close(&d->parser);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
