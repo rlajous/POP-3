@@ -561,6 +561,40 @@ request_read_close(const unsigned state, struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//REQUEST_WRITE
+////////////////////////////////////////////////////////////////////////////////
+
+static unsigned
+request_write(struct selector_key *key) {
+    struct request_st *d = &ATTACHMENT(key)->client.request;
+
+    unsigned ret = RESPONSE_READ;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    buffer *b = d->client_buffer;
+    ptr = buffer_read_ptr(b, &count);
+
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(d->client_buffer, n);
+        if(!buffer_can_read(d->client_buffer)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = RESPONSE_READ;
+            } else {
+                return ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
         {
