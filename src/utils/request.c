@@ -165,20 +165,23 @@ request_is_done(const enum request_state st, bool* errored) {
 }
 
 extern enum request_state
-request_consume(buffer *b, struct request_parser *p, bool *errored){
+request_consume(buffer *b, struct request_parser *p, bool *errored) {
     enum request_state st = p->state;
-    while(buffer_can_read(b)){
+    while(buffer_can_read(b)) {
         const uint8_t c = buffer_read(b);
         st = request_parser_feed(p, c);
         if(request_is_done(st, errored)) {
             break;
         }
     }
+    if(*errored && st != request_invalid_termination_error) {
+        rmv_invalid_cmd(b);
+    }
     return st;
 }
 
 extern void
-request_close(struct request_parser *p){
+request_close(struct request_parser *p) {
     //Creo que no hay nada que hacer.
 }
 

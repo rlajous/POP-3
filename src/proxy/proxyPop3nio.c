@@ -36,7 +36,7 @@ struct hello_st {
 };
 
 struct request_st {
-    buffer                  *origin_buffer, *client_buffer;
+    buffer                  *wb, *rb;
 
     struct request          request;
     struct request_parser   parser;
@@ -87,7 +87,7 @@ struct pop3 {
 };
 
 /**
- * Pool de `struct socks5', para ser reusados.
+ * Pool de `struct pop3', para ser reusados.
  *
  * Como tenemos un unico hilo que emite eventos no necesitamos barreras de
  * contención.
@@ -506,23 +506,23 @@ static void
 request_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
     struct request_st *d = &p->client.request;
+    request_parser_init(&d->parser);
 
-    d->origin_buffer              = &(p->write_buffer);
-    d->client_buffer              = &(p->read_buffer);
+    d->wb              = &(p->write_buffer);
+    d->rb              = &(p->read_buffer);
     d->parser.request  = &d->request;
 
 }
 
 static unsigned
-request_process_error(struct selector_key *key, struct request_st *d);
+request_process(struct selector_key *key, struct request_st *d);
 
 static unsigned
 request_read(struct selector_key *key) {
     struct request_st * d = &ATTACHMENT(key)->client.request;
 
-    buffer *b     = d->client_buffer;
+    buffer *b     = d->rb;
     unsigned  ret   = REQUEST_READ;
-    bool  error = false;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
@@ -530,27 +530,36 @@ request_read(struct selector_key *key) {
     ptr = buffer_write_ptr(b, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-        int st = request_consume(b, &d->parser, &error);
-        if(request_is_done(st, 0)) {
-            if(error){
-                buffer_write_adv(b, n);
-                ret = request_process_error(key, d);
+        while(buffer_can_read(b)) {
+            int st = request_consume(b, &d->parser, 0);
+            buffer_write_adv(b, n);
+            if (request_is_done(st, 0)) {
+                ret = request_process(key, d);
             } else {
+                //TODO el request esta incompleto.
                 ret = REQUEST_WRITE;
             }
-        } else {
-            ret = ERROR;
         }
-        return error ? ERROR : ret;
     }
+    return ret;
 
 }
+/**
+ * Process the request
+ * */
 static unsigned
-request_process_error(struct selector_key *key, struct request_st *d) {
+request_process(struct selector_key *key, struct request_st *d){
 
-    enum request_state st = d->parser.state;
-    //Escribir en el buffer que usa el fd de Response write una response apropiada al error.
-    return RESPONSE_WRITE;
+    buffer *b     = d->wb;
+    ssize_t n;
+
+    //TODO: Add command or error to the list.
+    if(buffer_can_read(d->rb)) {
+        request_parser_init(&d->parser);
+        return REQUEST_READ;
+    } else {
+        return REQUEST_WRITE;
+    }
 }
 
 static void
@@ -573,15 +582,15 @@ request_write(struct selector_key *key) {
     size_t  count;
     ssize_t  n;
 
-    buffer *b = d->client_buffer;
+    buffer *b = d->wb;
     ptr = buffer_read_ptr(b, &count);
 
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
         ret = ERROR;
     } else {
-        buffer_read_adv(d->client_buffer, n);
-        if(!buffer_can_read(d->client_buffer)) {
+        buffer_read_adv(d->wb, n);
+        if(!buffer_can_read(d->wb)) {
             if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
                 ret = RESPONSE_READ;
             } else {

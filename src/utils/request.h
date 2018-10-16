@@ -42,6 +42,21 @@ struct request {
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
 };
+
+struct error {
+    enum request_state state;
+    char *serialized_error;
+};
+
+struct queue {
+    union {
+        struct request *request;
+        struct error *error;
+    }item;
+
+    struct queue *next;
+};
+
 /** Estructura es consultada por el parser para obtener
  * Informacion sobre el comando*/
 struct pop3_cmd_data {
