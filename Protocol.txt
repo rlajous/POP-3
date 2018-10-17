@@ -1,0 +1,40 @@
+REQUEST:
+
++-----+-------+------+----------+...+------+----------+
+| CMD | NARGS |ARGLEN|   DATA   |   |ARGLEN|   DATA   |
++-----+-------+------+----------+   +------+----------+
+|  1  | 0-255 | 0-255| Variable |   | 0-255| Variable |
++-----+-------+------+----------+...+------+----------+
+
+CMD:
+	00 PASSWORD - 1 arg
+	
+	01 CONCURRENT CONNECTIONS - 0 args
+	02 TRANSFERED BYTES 	  - 0 args
+	03 HYSTORIC ACCESS		  - 0 args
+	04 FREE FOR POSSIBLE IMPROVEMENTS
+	.
+	.
+	.
+	10 TIMEOUTS	- 2 args, SECONDS, MILLISECONDS (no me acuerdo el tamaño, chequearlo)
+	11 BUFFER SIZE - 1 arg
+	12 TRANSFER STATUS - 0 args (si hay devuelve la transformacion vigente)
+	13 TRANSFER CHANGE - 1 arg (nueva transformacion)
+	14 REPLACE MESSAGES - n args (nuevos mensajes).
+	
+	POSIBLE CAMBIO: Sacar argumentos variables y directamente pedir data de longitud variable.
+	Los mensajes del 14 se pueden mandar en uno solo total se van a concatenar despues y lo de
+	los timeouts se puede separar en dos.
+	
+RESPONSE:
+
++------+--------+----------+
+| TYPE | LENGTH |   DATA   |
++------+--------+----------+
+|   1  |  0-255 | Variable |
++------+--------+----------+
+
+TYPE:
+	00 UNAUTHORIZED
+	01 OK length y data tendran los datos necesarios, si no tiene data length debera ser 0
+	02 INVALID REQUEST
