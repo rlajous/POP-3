@@ -498,9 +498,8 @@ hello_write(struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// REQUEST
+/// REQUEST
 ////////////////////////////////////////////////////////////////////////////////
-
 /** inicializa las variables de los estados del REQUEST */
 static void
 request_init(const unsigned state, struct selector_key *key) {
@@ -521,18 +520,19 @@ static unsigned
 request_read(struct selector_key *key) {
     struct request_st * d = &ATTACHMENT(key)->client.request;
 
-    buffer *b     = d->rb;
+    buffer *rb      = d->rb;
+    buffer *wb      = d->wb;
     unsigned  ret   = REQUEST_READ;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    ptr = buffer_write_ptr(b, &count);
+    ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-        while(buffer_can_read(b)) {
-            int st = request_consume(b, &d->parser, 0);
-            buffer_write_adv(b, n);
+        while(buffer_can_read(rb)) {
+            buffer_write_adv(rb, n);
+            int st = request_consume(rb, wb, &d->parser, 0);
             if (request_is_done(st, 0)) {
                 ret = request_process(key, d);
             } else {
@@ -553,26 +553,22 @@ request_process(struct selector_key *key, struct request_st *d){
     buffer *b     = d->wb;
     ssize_t n;
 
-    //TODO: Add command or error to the list.
-    if(buffer_can_read(d->rb)) {
-        request_parser_init(&d->parser);
-        return REQUEST_READ;
-    } else {
-        return REQUEST_WRITE;
-    }
+    selector_status s = 0;
+    s |= selector_set_interest    (key->s, ATTACHMENT(key)->origin_fd, OP_WRITE);
+    s |= selector_set_interest_key(key,                   OP_NOOP);
+
+    return SELECTOR_SUCCESS == s ? REQUEST_WRITE : ERROR;
 }
 
 static void
 request_read_close(const unsigned state, struct selector_key *key) {
     struct request_st * d = &ATTACHMENT(key)->client.request;
-
     request_close(&d->parser);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//REQUEST_WRITE
+///REQUEST WRITE
 ////////////////////////////////////////////////////////////////////////////////
-
 static unsigned
 request_write(struct selector_key *key) {
     struct request_st *d = &ATTACHMENT(key)->client.request;
@@ -603,6 +599,58 @@ request_write(struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// RESPONSE READ
+////////////////////////////////////////////////////////////////////////////////
+static unsigned
+response_read(struct selector_key *key){
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+
+    buffer *rb      = d->rb;
+    buffer *wb      = d->wb;
+    unsigned  ret   = REQUEST_READ;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(wb, &count);
+    n = recv(key->fd, ptr, count, 0);
+
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// RESPONSE WRITE
+////////////////////////////////////////////////////////////////////////////////
+static unsigned
+response_write(struct selector_key *key){
+    struct request_st *d = &ATTACHMENT(key)->client.request;
+
+    unsigned ret    = REQUEST_READ;
+     uint8_t *ptr;
+      size_t count;
+     ssize_t n;
+
+    buffer *b   = d->wb;
+    ptr         = buffer_read_ptr(b, &count);
+
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(d->wb, n);
+        if(!buffer_can_read(d->wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = RESPONSE_READ;
+            } else {
+                return ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+////////////////////////////////////////////////////////////////////////////////
+
 
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
@@ -624,11 +672,14 @@ static const struct state_definition proxy_states[] = {
                 .on_departure     = request_read_close,
                 .on_read_ready    = request_read,
         },{
-                .state            = REQUEST_WRITE
+                .state            = REQUEST_WRITE,
+                .on_write_ready   = request_write,
         },{
-                .state            = RESPONSE_READ
+                .state            = RESPONSE_READ,
+                .on_read_ready    = response_read,
         },{
-                .state            = RESPONSE_WRITE
+                .state            = RESPONSE_WRITE,
+                .on_write_ready   = response_write,
         },{
                 .state            = COMMIT
         },{
