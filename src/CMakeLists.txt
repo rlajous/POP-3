@@ -6,7 +6,8 @@ add_executable(proxyPop main.c
         utils/buffer.c
         proxy/proxyPop3nio.c
         utils/request.c
-        utils/proxyArguments.c)
+        utils/proxyArguments.c
+        utils/request_queue.c)
 find_package(Threads)
 target_link_libraries(proxyPop ${CMAKE_THREAD_LIBS_INIT})
 

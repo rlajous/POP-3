@@ -42,6 +42,21 @@ struct request {
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
 };
+
+struct error {
+    enum request_state state;
+    char *serialized_error;
+};
+
+struct queue {
+    union {
+        struct request *request;
+        struct error *error;
+    }item;
+
+    struct queue *next;
+};
+
 /** Estructura es consultada por el parser para obtener
  * Informacion sobre el comando*/
 struct pop3_cmd_data {
@@ -136,7 +151,7 @@ request_parser_feed (struct request_parser *p, const uint8_t c);
  *   si el parsing se debió a una condición de error
  */
 enum request_state
-request_consume(buffer *b, struct request_parser *p, bool *errored);
+request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored);
 
 /**
  * Permite distinguir a quien usa socks_hello_parser_feed si debe seguir

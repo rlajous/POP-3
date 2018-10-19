@@ -11,6 +11,7 @@
 #include "../utils/stm.h"
 #include "../utils/selector.h"
 #include "../utils/proxyArguments.h"
+#include "../utils/request.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -32,6 +33,14 @@ enum pop3_state {
 
 struct hello_st {
     buffer              *wb;
+};
+
+struct request_st {
+    buffer                  *wb, *rb;
+
+    struct request          request;
+    struct request_parser   parser;
+
 };
 
 struct pop3 {
@@ -57,6 +66,7 @@ struct pop3 {
     /** estados para el client_fd */
     union {
         struct hello_st hello;
+        struct request_st request;
     } client;
     /** estados para el origin_fd */
     union {
@@ -77,7 +87,7 @@ struct pop3 {
 };
 
 /**
- * Pool de `struct socks5', para ser reusados.
+ * Pool de `struct pop3', para ser reusados.
  *
  * Como tenemos un unico hilo que emite eventos no necesitamos barreras de
  * contención.
@@ -420,7 +430,9 @@ connecting(struct selector_key *key) {
 }
 
 
-/** HELLO */
+////////////////////////////////////////////////////////////////////////////////
+// HELLO
+////////////////////////////////////////////////////////////////////////////////
 
 static void
 hello_init(const unsigned state, struct selector_key *key) {
@@ -485,6 +497,161 @@ hello_write(struct selector_key *key) {
     return ret;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+/// REQUEST
+////////////////////////////////////////////////////////////////////////////////
+/** inicializa las variables de los estados del REQUEST */
+static void
+request_init(const unsigned state, struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct request_st *d = &p->client.request;
+    request_parser_init(&d->parser);
+
+    d->wb              = &(p->write_buffer);
+    d->rb              = &(p->read_buffer);
+    d->parser.request  = &d->request;
+
+}
+
+static unsigned
+request_process(struct selector_key *key, struct request_st *d);
+
+static unsigned
+request_read(struct selector_key *key) {
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+
+    buffer *rb      = d->rb;
+    buffer *wb      = d->wb;
+    unsigned  ret   = REQUEST_READ;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(rb, &count);
+    n = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        while(buffer_can_read(rb)) {
+            buffer_write_adv(rb, n);
+            int st = request_consume(rb, wb, &d->parser, 0);
+            if (request_is_done(st, 0)) {
+                ret = request_process(key, d);
+            } else {
+                //TODO el request esta incompleto.
+                ret = REQUEST_WRITE;
+            }
+        }
+    }
+    return ret;
+
+}
+/**
+ * Process the request
+ * */
+static unsigned
+request_process(struct selector_key *key, struct request_st *d){
+
+    buffer *b     = d->wb;
+    ssize_t n;
+
+    selector_status s = 0;
+    s |= selector_set_interest    (key->s, ATTACHMENT(key)->origin_fd, OP_WRITE);
+    s |= selector_set_interest_key(key,                   OP_NOOP);
+
+    return SELECTOR_SUCCESS == s ? REQUEST_WRITE : ERROR;
+}
+
+static void
+request_read_close(const unsigned state, struct selector_key *key) {
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+    request_close(&d->parser);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///REQUEST WRITE
+////////////////////////////////////////////////////////////////////////////////
+static unsigned
+request_write(struct selector_key *key) {
+    struct request_st *d = &ATTACHMENT(key)->client.request;
+
+    unsigned ret = RESPONSE_READ;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    buffer *b = d->wb;
+    ptr = buffer_read_ptr(b, &count);
+
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(d->wb, n);
+        if(!buffer_can_read(d->wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = RESPONSE_READ;
+            } else {
+                return ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// RESPONSE READ
+////////////////////////////////////////////////////////////////////////////////
+static unsigned
+response_read(struct selector_key *key){
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+
+    buffer *rb      = d->rb;
+    buffer *wb      = d->wb;
+    unsigned  ret   = REQUEST_READ;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(wb, &count);
+    n = recv(key->fd, ptr, count, 0);
+
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// RESPONSE WRITE
+////////////////////////////////////////////////////////////////////////////////
+static unsigned
+response_write(struct selector_key *key){
+    struct request_st *d = &ATTACHMENT(key)->client.request;
+
+    unsigned ret    = REQUEST_READ;
+     uint8_t *ptr;
+      size_t count;
+     ssize_t n;
+
+    buffer *b   = d->wb;
+    ptr         = buffer_read_ptr(b, &count);
+
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(d->wb, n);
+        if(!buffer_can_read(d->wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = RESPONSE_READ;
+            } else {
+                return ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+////////////////////////////////////////////////////////////////////////////////
+
+
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
         {
@@ -500,13 +667,19 @@ static const struct state_definition proxy_states[] = {
                 .on_read_ready    = hello_read,
                 .on_write_ready   = hello_write,
         },{
-                .state            = REQUEST_READ
+                .state            = REQUEST_READ,
+                .on_arrival       = request_init,
+                .on_departure     = request_read_close,
+                .on_read_ready    = request_read,
         },{
-                .state            = REQUEST_WRITE
+                .state            = REQUEST_WRITE,
+                .on_write_ready   = request_write,
         },{
-                .state            = RESPONSE_READ
+                .state            = RESPONSE_READ,
+                .on_read_ready    = response_read,
         },{
-                .state            = RESPONSE_WRITE
+                .state            = RESPONSE_WRITE,
+                .on_write_ready   = response_write,
         },{
                 .state            = COMMIT
         },{
@@ -517,6 +690,7 @@ static const struct state_definition proxy_states[] = {
                 .state            = ERROR
         }
 };
+
 static const struct state_definition *
 pop3_describe_states(){
     return proxy_states;

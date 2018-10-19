@@ -156,7 +156,6 @@ request_parser_init(struct request_parser * p) {
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
 }
 
-//TODO(fran): no se bien que es esto del errored
 extern bool
 request_is_done(const enum request_state st, bool* errored) {
     if(st >= request_error && errored != 0) {
@@ -166,11 +165,15 @@ request_is_done(const enum request_state st, bool* errored) {
 }
 
 extern enum request_state
-request_consume(buffer *b, struct request_parser *p, bool *errored){
+request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored) {
     enum request_state st = p->state;
-    while(buffer_can_read(b)){
-        const uint8_t c = buffer_read(b);
+    while(buffer_can_read(rb)) {
+        if(!buffer_can_write(wb)) {
+            //Not a parser error, but should proceed to write if a command has been identified.
+        }
+        const uint8_t c = buffer_read(rb);
         st = request_parser_feed(p, c);
+        buffer_write(wb, c);
         if(request_is_done(st, errored)) {
             break;
         }
@@ -179,7 +182,7 @@ request_consume(buffer *b, struct request_parser *p, bool *errored){
 }
 
 extern void
-request_close(struct request_parser *p){
+request_close(struct request_parser *p) {
     //Creo que no hay nada que hacer.
 }
 
