@@ -28,6 +28,7 @@ request_identify_cmd(struct request_parser* p) {
     for(int i = 0; i < 9 ; i++){
         if(0 == strcmp(p->cmd_buffer, POP3_CMDS_INFO[i].string_representation)){
             p->request->cmd = POP3_CMDS_INFO[i].request_cmd;
+            p->request->multi = POP3_CMDS_INFO[i].multi;
             return true;
         }
     }
@@ -41,6 +42,13 @@ has_minimum_nargs(struct request_parser *p) {
 
 bool has_maximum_nargs(struct request_parser *p) {
     return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].max_args;
+}
+
+void
+arg_dependant_multi(struct request_parser *p) {
+    if(p->request->cmd == list || p->request->cmd == uidl){
+        p->request->multi = false;
+    }
 }
 
 enum request_state
@@ -102,6 +110,7 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
         p->request->nargs++;
         p->request->arg[p->request->nargs-1][p->i] = '\0';
         remaining_set(p, MAX_ARG_LENGTH);
+        arg_dependant_multi(p);
         return request_arg;
     }
     if(!remaining_is_done(p)){
@@ -154,6 +163,7 @@ request_parser_init(struct request_parser * p) {
     remaining_set(p, MAX_CMD_LENGTH);
     memset(p->request, 0, sizeof(*(p->request)));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
+    p->request->nargs  = 1;
 }
 
 extern bool

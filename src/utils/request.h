@@ -41,6 +41,7 @@ struct request {
     char                arg[MAX_ARGUMENTS][MAX_ARG_LENGTH + 1];
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
+    bool                multi;
 };
 
 struct error {
@@ -60,10 +61,11 @@ struct queue {
 /** Estructura es consultada por el parser para obtener
  * Informacion sobre el comando*/
 struct pop3_cmd_data {
-    char * string_representation;
-    enum pop3_req_cmd request_cmd;
-    uint8_t max_args;
-    uint8_t min_args;
+    char *              string_representation;
+    enum pop3_req_cmd   request_cmd;
+    uint8_t             max_args;
+    uint8_t             min_args;
+    bool                multi;
 };
 
 //TODO(fran) : No estoy seguro si ponerle static o no
@@ -71,55 +73,65 @@ struct pop3_cmd_data {
  *  El indice del array se correlaciona con el valor numérico del
  *  enum de pop3_req_cmd */
 static struct pop3_cmd_data POP3_CMDS_INFO[] ={
-        { .request_cmd = stat,
-          .string_representation = "stat",
-          .max_args = 0,
-          .min_args = 0,
+        { .request_cmd              = stat,
+          .string_representation    = "stat",
+          .max_args                 = 0,
+          .min_args                 = 0,
+          .multi                    = false,
         },
-        { .request_cmd = list,
-          .string_representation = "list",
-          .max_args = 1,
-          .min_args = 0,
+        { .request_cmd              = list,
+          .string_representation    = "list",
+          .max_args                 = 1,
+          .min_args                 = 0,
+          .multi                    = true,
         },
-        { .request_cmd = retr,
-          .string_representation = "retr",
-          .max_args = 1,
-          .min_args = 1,
+        { .request_cmd              = retr,
+          .string_representation    = "retr",
+          .max_args                 = 1,
+          .min_args                 = 1,
+          .multi                    = true,
         },
-        { .request_cmd = dele,
-          .string_representation = "dele",
-          .max_args = 1,
-          .min_args = 1,
+        { .request_cmd              = dele,
+          .string_representation    = "dele",
+          .max_args                 = 1,
+          .min_args                 = 1,
+          .multi                    = false;
         },
-        { .request_cmd = noop,
-          .string_representation = "noop",
-          .max_args = 0,
-          .min_args = 0,
+        { .request_cmd              = noop,
+          .string_representation    = "noop",
+          .max_args                 = 0,
+          .min_args                 = 0,
+          .multi                    = false;
         },
-        { .request_cmd = rset,
-          .string_representation = "rset",
-          .max_args = 0,
-          .min_args = 0,
+        { .request_cmd              = rset,
+          .string_representation    = "rset",
+          .max_args                 = 0,
+          .min_args                 = 0,
+          .multi                    = false,
         },
-        { .request_cmd = quit,
-          .string_representation = "quit",
-          .max_args = 0,
-          .min_args = 0,
+        { .request_cmd              = quit,
+          .string_representation    = "quit",
+          .max_args                 = 0,
+          .min_args                 = 0,
+          .multi                    = false,
         },
-        { .request_cmd = uidl,
-          .string_representation = "uidl",
-          .max_args = 1,
-          .min_args = 0,
+        { .request_cmd              = uidl,
+          .string_representation    = "uidl",
+          .max_args                 = 1,
+          .min_args                 = 0,
+          .multi                    = true,
         },
-        { .request_cmd = top,
-          .string_representation = "top",
-          .max_args = 2,
-          .min_args = 2,
+        { .request_cmd              = top,
+          .string_representation    = "top",
+          .max_args                 = 2,
+          .min_args                 = 2,
+          .multi                    = true,
         },
-        { .request_cmd = apop,
-          .string_representation = "apop",
-          .max_args = 2,
-          .min_args = 2,
+        { .request_cmd              = apop,
+          .string_representation    = "apop",
+          .max_args                 = 2,
+          .min_args                 = 2,
+          .multi                    = false,
         },
 
 };
