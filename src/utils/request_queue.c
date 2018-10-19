@@ -5,37 +5,31 @@
 #include <stdlib.h>
 #include "request_queue.h"
 
-struct Node {
-    struct request request;
-    struct Node *next;
-}Node;
-
-struct Queue {
-    struct Node *first;
-    struct Node *last;
-    unsigned int size;
-}Queue;
-
 void
-init(struct Queue *q) {
+queue_init(struct request_queue *q) {
     q->first = NULL;
     q->last = NULL;
     q->size = 0;
 };
 
 void
-queue(struct Queue *q, struct request request) {
-    struct Node *node = malloc(sizeof(Node));
+queue_request(struct request_queue *q, struct request request) {
+    struct node *node = malloc(sizeof(node));
     node->request = request;
     q->last->next = node;
     q->last = node;
 }
 
 struct request
-pop(struct Queue *q) {
-    struct Node *node = q->first;
+pop_request(struct request_queue *q) {
+    struct node *node = q->first;
     struct request request = node->request;
     q->first = node->next;
     free(node);
     return request;
+}
+
+extern bool
+queue_is_empty(struct request_queue *q) {
+    return q->first == NULL;
 }
