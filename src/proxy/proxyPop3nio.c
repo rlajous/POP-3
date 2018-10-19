@@ -431,6 +431,29 @@ connecting(struct selector_key *key) {
     return SELECTOR_SUCCESS == s ? HELLO : ERROR;
 }
 
+static fd_interest
+compute_write_interests(fd_selector s, struct request_st *d) {
+    fd_interest ret = OP_NOOP;
+    if ((d->duplex & OP_WRITE) && buffer_can_read (d->wb)) {
+        ret |= OP_WRITE;
+    }
+    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
+        abort();
+    }
+    return ret;
+}
+
+static fd_interest
+compute_read_interests(fd_selector s, struct request_st *d) {
+    fd_interest ret = OP_NOOP;
+    if ((d->duplex & OP_READ)  && buffer_can_write(d->rb)) {
+        ret |= OP_READ;
+    }
+    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
+        abort();
+    }
+    return ret;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // HELLO
@@ -527,58 +550,6 @@ request_init(const unsigned state, struct selector_key *key) {
 static unsigned
 request_process(struct selector_key *key, struct request_st *d);
 
-//static fd_interest
-//compute_interests(fd_selector s, struct request_st* d) {
-//    fd_interest ret = OP_NOOP;
-//    if ((d->duplex & OP_READ)  && buffer_can_write(d->rb)) {
-//        ret |= OP_READ;
-//    }
-//    if ((d->duplex & OP_WRITE) && buffer_can_read (d->wb)) {
-//        ret |= OP_WRITE;
-//    }
-//    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
-//        abort();
-//    }
-//    return ret;
-//}
-
-static fd_interest
-compute_write_interests(fd_selector s, struct request_st *d) {
-    fd_interest ret = OP_NOOP;
-    if ((d->duplex & OP_WRITE) && buffer_can_read (d->wb)) {
-        ret |= OP_WRITE;
-    }
-    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
-        abort();
-    }
-    return ret;
-}
-
-static fd_interest
-compute_read_intereststs(fd_selector s, struct request_st *d) {
-    fd_interest ret = OP_NOOP;
-    if ((d->duplex & OP_READ)  && buffer_can_write(d->rb)) {
-        ret |= OP_READ;
-    }
-    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
-        abort();
-    }
-    return ret;
-}
-
-/** elige la estructura de copia correcta de cada fd (origin o client) */
-static struct request_st *
-request_copy_ptr(struct selector_key *key) {
-    struct request_st * d = &ATTACHMENT(key)->client.request;
-
-    if(*d->fd == key->fd) {
-        // ok
-    } else {
-        d = d->other;
-    }
-    return  d;
-}
-
 static unsigned
 request_read(struct selector_key *key) {
     struct request_st * d = &ATTACHMENT(key)->client.request;
@@ -627,9 +598,6 @@ request_read_close(const unsigned state, struct selector_key *key) {
     request_close(&d->parser);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///REQUEST WRITE
-////////////////////////////////////////////////////////////////////////////////
 static unsigned
 request_write(struct selector_key *key) {
     struct request_st *d = &ATTACHMENT(key)->origin.request;
@@ -655,10 +623,10 @@ request_write(struct selector_key *key) {
     } else {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb)) {
-            fd_interest client = compute_read_intereststs(key->s, d->other);
+            fd_interest client = compute_read_interests(key->s, d->other);
             fd_interest origin = compute_write_interests(key->s, d);
             if(client == OP_NOOP && origin == OP_NOOP){
-                compute_read_intereststs(key->s, d);
+                compute_read_interests(key->s, d);
                 compute_write_interests(key->s, d->other);
                 ret = RESPONSE;
             } else {
@@ -671,8 +639,29 @@ request_write(struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// RESPONSE READ
+/// RESPONSE
 ////////////////////////////////////////////////////////////////////////////////
+
+static void
+response_init(const unsigned state, struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct request_st *d = &p->client.request;
+    request_parser_init(&d->parser);
+
+    d->fd        = &ATTACHMENT(key)->client_fd;
+    d->rb        = &ATTACHMENT(key)->read_buffer;
+    d->wb        = &ATTACHMENT(key)->write_buffer;
+    d->duplex    = OP_READ | OP_WRITE;
+    d->other     = &ATTACHMENT(key)->origin.request;
+
+    d = &ATTACHMENT(key)->origin.request;
+    d->fd       = &ATTACHMENT(key)->origin_fd;
+    d->rb       = &ATTACHMENT(key)->write_buffer;
+    d->wb       = &ATTACHMENT(key)->read_buffer;
+    d->duplex   = OP_READ | OP_WRITE;
+    d->other    = &ATTACHMENT(key)->client.request;
+
+}
 static unsigned
 response_read(struct selector_key *key){
     struct request_st * d = &ATTACHMENT(key)->client.request;
@@ -682,16 +671,13 @@ response_read(struct selector_key *key){
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
-    //TODO: PARSEAR EL REQUEST Y DEMAS;
+    //TODO: PARSEAR EL RESPONSE Y DEMAS;
     ptr = buffer_write_ptr(wb, &count);
     n = recv(key->fd, ptr, count, 0);
 
     return RESPONSE;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// RESPONSE WRITE
-////////////////////////////////////////////////////////////////////////////////
 static unsigned
 response_write(struct selector_key *key){
     struct request_st *d = &ATTACHMENT(key)->client.request;
@@ -710,18 +696,22 @@ response_write(struct selector_key *key){
     } else {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb)) {
-            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
-                ret = RESPONSE_READ;
+            fd_interest client = compute_read_interests(key->s, d->other);
+            fd_interest origin = compute_write_interests(key->s, d);
+            if(client == OP_NOOP && origin == OP_NOOP){
+                compute_read_interests(key->s, d);
+                compute_write_interests(key->s, d->other);
+                ret = RESPONSE;
             } else {
-                return ERROR;
+                ret = REQUEST;
             }
         }
     }
 
     return ret;
 }
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
 
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
