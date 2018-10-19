@@ -12,6 +12,7 @@
 #include "../utils/selector.h"
 #include "../utils/proxyArguments.h"
 #include "../utils/request.h"
+#include "../utils/request_queue.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -21,12 +22,8 @@ enum pop3_state {
     RESOLVE_ADDRESS,
     CONNECTING,
     HELLO,
-    REQUEST_READ,
-    REQUEST_WRITE,
-    RESPONSE_READ,
-    RESPONSE_WRITE,
-    COMMIT,
-    QUIT,
+    REQUEST,
+    RESPONSE,
     DONE,
     ERROR,
 };
@@ -37,9 +34,11 @@ struct hello_st {
 
 struct request_st {
     buffer                  *wb, *rb;
-
     struct request          request;
     struct request_parser   parser;
+    int                     *fd;
+    fd_interest             duplex;
+    struct request_st       *other;
 
 };
 
@@ -70,13 +69,15 @@ struct pop3 {
     } client;
     /** estados para el origin_fd */
     union {
-        //struct hello_st hello;
-    } orig;
+        struct request_st request;
+    } origin;
 
     /** buffers para ser usados read_buffer, write_buffer.*/
     //TODO: Aca se deberia modificar el tamaño del buffer en tiempo de ejecución creo
     uint8_t raw_buff_a[2048], raw_buff_b[2048];
     buffer read_buffer, write_buffer;
+
+    struct request_queue *request_queue;
 
     /** cantidad de referencias a este objeto. si es uno se debe destruir */
     unsigned references;
@@ -128,6 +129,7 @@ static struct pop3 * pop3_new(int client_fd){
 
     buffer_init(&ret->read_buffer,  N(ret->raw_buff_a), ret->raw_buff_a);
     buffer_init(&ret->write_buffer, N(ret->raw_buff_b), ret->raw_buff_b);
+    queue_init(ret->request_queue);
 
     ret->references = 1;
 finally:
@@ -487,7 +489,7 @@ hello_write(struct selector_key *key) {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb)) {
             if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
-                ret = REQUEST_READ;
+                ret = REQUEST;
             } else {
                 ret = ERROR;
             }
@@ -507,14 +509,75 @@ request_init(const unsigned state, struct selector_key *key) {
     struct request_st *d = &p->client.request;
     request_parser_init(&d->parser);
 
-    d->wb              = &(p->write_buffer);
-    d->rb              = &(p->read_buffer);
-    d->parser.request  = &d->request;
+    d->fd        = &ATTACHMENT(key)->client_fd;
+    d->rb        = &ATTACHMENT(key)->read_buffer;
+    d->wb        = &ATTACHMENT(key)->write_buffer;
+    d->duplex    = OP_READ | OP_WRITE;
+    d->other     = &ATTACHMENT(key)->origin.request;
+
+    d = &ATTACHMENT(key)->origin.request;
+    d->fd       = &ATTACHMENT(key)->origin_fd;
+    d->rb       = &ATTACHMENT(key)->write_buffer;
+    d->wb       = &ATTACHMENT(key)->read_buffer;
+    d->duplex   = OP_READ | OP_WRITE;
+    d->other    = &ATTACHMENT(key)->client.request;
 
 }
 
 static unsigned
 request_process(struct selector_key *key, struct request_st *d);
+
+//static fd_interest
+//compute_interests(fd_selector s, struct request_st* d) {
+//    fd_interest ret = OP_NOOP;
+//    if ((d->duplex & OP_READ)  && buffer_can_write(d->rb)) {
+//        ret |= OP_READ;
+//    }
+//    if ((d->duplex & OP_WRITE) && buffer_can_read (d->wb)) {
+//        ret |= OP_WRITE;
+//    }
+//    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
+//        abort();
+//    }
+//    return ret;
+//}
+
+static fd_interest
+compute_write_interests(fd_selector s, struct request_st *d) {
+    fd_interest ret = OP_NOOP;
+    if ((d->duplex & OP_WRITE) && buffer_can_read (d->wb)) {
+        ret |= OP_WRITE;
+    }
+    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
+        abort();
+    }
+    return ret;
+}
+
+static fd_interest
+compute_read_intereststs(fd_selector s, struct request_st *d) {
+    fd_interest ret = OP_NOOP;
+    if ((d->duplex & OP_READ)  && buffer_can_write(d->rb)) {
+        ret |= OP_READ;
+    }
+    if(SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
+        abort();
+    }
+    return ret;
+}
+
+/** elige la estructura de copia correcta de cada fd (origin o client) */
+static struct request_st *
+request_copy_ptr(struct selector_key *key) {
+    struct request_st * d = &ATTACHMENT(key)->client.request;
+
+    if(*d->fd == key->fd) {
+        // ok
+    } else {
+        d = d->other;
+    }
+    return  d;
+}
 
 static unsigned
 request_read(struct selector_key *key) {
@@ -522,7 +585,7 @@ request_read(struct selector_key *key) {
 
     buffer *rb      = d->rb;
     buffer *wb      = d->wb;
-    unsigned  ret   = REQUEST_READ;
+    unsigned  ret   = REQUEST;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
@@ -537,27 +600,25 @@ request_read(struct selector_key *key) {
                 ret = request_process(key, d);
             } else {
                 //TODO el request esta incompleto.
-                ret = REQUEST_WRITE;
+                ret = REQUEST;
             }
+        }
+    } else {
+        shutdown(*d->fd, SHUT_RD);
+        d->duplex &= ~OP_READ;
+        if(*d->other->fd != -1) {
+            shutdown(*d->other->fd, SHUT_WR);
+            d->other->duplex &= ~OP_WRITE;
         }
     }
     return ret;
-
 }
-/**
- * Process the request
- * */
+
+/**Process the request*/
 static unsigned
 request_process(struct selector_key *key, struct request_st *d){
-
-    buffer *b     = d->wb;
-    ssize_t n;
-
-    selector_status s = 0;
-    s |= selector_set_interest    (key->s, ATTACHMENT(key)->origin_fd, OP_WRITE);
-    s |= selector_set_interest_key(key,                   OP_NOOP);
-
-    return SELECTOR_SUCCESS == s ? REQUEST_WRITE : ERROR;
+    struct pop3 *pop3 = ATTACHMENT(key);
+    queue_request(pop3->request_queue, d->request);
 }
 
 static void
@@ -571,9 +632,9 @@ request_read_close(const unsigned state, struct selector_key *key) {
 ////////////////////////////////////////////////////////////////////////////////
 static unsigned
 request_write(struct selector_key *key) {
-    struct request_st *d = &ATTACHMENT(key)->client.request;
+    struct request_st *d = &ATTACHMENT(key)->origin.request;
 
-    unsigned ret = RESPONSE_READ;
+    unsigned ret = REQUEST;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
@@ -583,14 +644,25 @@ request_write(struct selector_key *key) {
 
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
-        ret = ERROR;
+        shutdown(*d->fd, SHUT_WR);
+        d->duplex &= ~OP_WRITE;
+        if(*d->other->fd != -1) {
+            shutdown(*d->other->fd, SHUT_RD);
+            d->other->duplex &= ~OP_READ;
+        }
+        //TODO: maybe we should do some graceful termination stuff here.
+        return ERROR;
     } else {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb)) {
-            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
-                ret = RESPONSE_READ;
+            fd_interest client = compute_read_intereststs(key->s, d->other);
+            fd_interest origin = compute_write_interests(key->s, d);
+            if(client == OP_NOOP && origin == OP_NOOP){
+                compute_read_intereststs(key->s, d);
+                compute_write_interests(key->s, d->other);
+                ret = RESPONSE;
             } else {
-                return ERROR;
+                ret = REQUEST;
             }
         }
     }
@@ -607,15 +679,14 @@ response_read(struct selector_key *key){
 
     buffer *rb      = d->rb;
     buffer *wb      = d->wb;
-    unsigned  ret   = REQUEST_READ;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
-
+    //TODO: PARSEAR EL REQUEST Y DEMAS;
     ptr = buffer_write_ptr(wb, &count);
     n = recv(key->fd, ptr, count, 0);
 
-    return ret;
+    return RESPONSE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -625,7 +696,7 @@ static unsigned
 response_write(struct selector_key *key){
     struct request_st *d = &ATTACHMENT(key)->client.request;
 
-    unsigned ret    = REQUEST_READ;
+    unsigned ret    = REQUEST;
      uint8_t *ptr;
       size_t count;
      ssize_t n;
@@ -667,23 +738,15 @@ static const struct state_definition proxy_states[] = {
                 .on_read_ready    = hello_read,
                 .on_write_ready   = hello_write,
         },{
-                .state            = REQUEST_READ,
+                .state            = REQUEST,
                 .on_arrival       = request_init,
                 .on_departure     = request_read_close,
                 .on_read_ready    = request_read,
-        },{
-                .state            = REQUEST_WRITE,
                 .on_write_ready   = request_write,
         },{
-                .state            = RESPONSE_READ,
-                .on_read_ready    = response_read,
-        },{
-                .state            = RESPONSE_WRITE,
+                .state            = RESPONSE,
                 .on_write_ready   = response_write,
-        },{
-                .state            = COMMIT
-        },{
-                .state            = QUIT
+                .on_read_ready    = response_read,
         },{
                 .state            = DONE
         },{
