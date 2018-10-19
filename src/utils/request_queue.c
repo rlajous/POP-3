@@ -3,6 +3,7 @@
 //
 
 #include <stdlib.h>
+#include <string.h>
 #include "request_queue.h"
 
 void
@@ -14,9 +15,15 @@ queue_init(struct request_queue *q) {
 
 void
 queue_request(struct request_queue *q, struct request *request) {
-    struct node *node = malloc(sizeof(node));
-    node->request = request;
-    q->last->next = node;
+    struct node *node = malloc(sizeof(struct node));
+    node->request = malloc(sizeof(struct request));
+    memcpy(node->request, request, sizeof(struct request));
+
+    if(q->first == NULL) {
+        q->first = node;
+    } else {
+        q->last->next = node;
+    }
     q->last = node;
 }
 
@@ -25,7 +32,6 @@ pop_request(struct request_queue *q) {
     struct node *node = q->first;
     struct request *request = node->request;
     q->first = node->next;
-    free(node->request);
     free(node);
     return request;
 }
