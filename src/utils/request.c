@@ -27,8 +27,8 @@ request_identify_cmd(struct request_parser* p) {
 
     for(int i = 0; i < 9 ; i++){
         if(0 == strcmp(p->cmd_buffer, POP3_CMDS_INFO[i].string_representation)){
-            p->request->cmd = POP3_CMDS_INFO[i].request_cmd;
-            p->request->multi = POP3_CMDS_INFO[i].multi;
+            p->request.cmd = POP3_CMDS_INFO[i].request_cmd;
+            p->request.multi = POP3_CMDS_INFO[i].multi;
             return true;
         }
     }
@@ -37,27 +37,22 @@ request_identify_cmd(struct request_parser* p) {
 
 bool
 has_minimum_nargs(struct request_parser *p) {
-    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].min_args;
+    return p->request.nargs >= POP3_CMDS_INFO[p->request.cmd].min_args;
 }
 
 bool has_maximum_nargs(struct request_parser *p) {
-    return p->request->nargs >= POP3_CMDS_INFO[p->request->cmd].max_args;
+    return p->request.nargs > POP3_CMDS_INFO[p->request.cmd].max_args;
 }
 
 void
 arg_dependant_multi(struct request_parser *p) {
-    if(p->request->cmd == list || p->request->cmd == uidl){
-        p->request->multi = false;
+    if(p->request.cmd == list || p->request.cmd == uidl){
+        p->request.multi = false;
     }
 }
 
 enum request_state
 request_parse_cmd(struct request_parser* p, const uint8_t c) {
-
-    /** Arguments have a max length of 4 chars */
-    if(remaining_is_done(p)){
-        return request_length_error;
-    }
 
     if(c == ' '){
         if(request_identify_cmd(p)){
@@ -81,6 +76,11 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
     /** LF without CR*/
     if(c == '\n'){
         return request_invalid_termination_error;
+    }
+
+    /** Arguments have a max length of 4 chars */
+    if(remaining_is_done(p)){
+        return request_length_error;
     }
     
     char append = (char)tolower(c);
@@ -107,15 +107,15 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
         return request_arg;
     }
     if(c == ' '){
-        p->request->nargs++;
-        p->request->arg[p->request->nargs-1][p->i] = '\0';
+        p->request.nargs++;
+        p->request.arg[p->request.nargs-1][p->i] = '\0';
         remaining_set(p, MAX_ARG_LENGTH);
         arg_dependant_multi(p);
         return request_arg;
     }
     if(!remaining_is_done(p)){
         char current_char = (char)c;
-        p->request->arg[p->request->nargs-1][p->i++] = current_char;
+        p->request.arg[p->request.nargs][p->i++] = current_char;
         return request_arg;
     } else {
         return request_arg;
@@ -161,9 +161,9 @@ extern void
 request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
     remaining_set(p, MAX_CMD_LENGTH);
-    memset(p->request, 0, sizeof(*(p->request)));
+    memset(&p->request, 0, sizeof(p->request));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
-    p->request->nargs  = 1;
+    p->request.nargs  = 0;
 }
 
 extern bool
@@ -174,18 +174,26 @@ request_is_done(const enum request_state st, bool* errored) {
     return st >= request_done;
 }
 
+static bool
+request_process(struct request_parser *p, struct request_queue *q) {
+    //TODO: RETURN ERROR
+    queue_request(q, &p->request);
+    return true;
+}
+
 extern enum request_state
-request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored) {
+request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored, struct request_queue *q) {
     enum request_state st = p->state;
     while(buffer_can_read(rb)) {
         if(!buffer_can_write(wb)) {
-            //Not a parser error, but should proceed to write if a command has been identified.
+            break;
         }
         const uint8_t c = buffer_read(rb);
         st = request_parser_feed(p, c);
         buffer_write(wb, c);
         if(request_is_done(st, errored)) {
-            break;
+            *errored &= request_process(p, q);
+            request_parser_init(p);
         }
     }
     return st;
