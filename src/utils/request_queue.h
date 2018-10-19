@@ -12,7 +12,7 @@
  * information parsed from the requests.
  * */
 struct node {
-    struct request request;
+    struct request *request;
     struct node *next;
 }node;
 
@@ -26,9 +26,9 @@ void
 queue_init(struct request_queue *q);
 
 void
-queue_request(struct request_queue *q, struct request request);
+queue_request(struct request_queue *q, struct request *request);
 
-struct request
+struct request*
 pop_request(struct request_queue *q);
 
 extern bool

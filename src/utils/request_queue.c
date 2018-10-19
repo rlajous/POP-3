@@ -13,18 +13,19 @@ queue_init(struct request_queue *q) {
 };
 
 void
-queue_request(struct request_queue *q, struct request request) {
+queue_request(struct request_queue *q, struct request *request) {
     struct node *node = malloc(sizeof(node));
     node->request = request;
     q->last->next = node;
     q->last = node;
 }
 
-struct request
+struct request*
 pop_request(struct request_queue *q) {
     struct node *node = q->first;
-    struct request request = node->request;
+    struct request *request = node->request;
     q->first = node->next;
+    free(node->request);
     free(node);
     return request;
 }
