@@ -34,13 +34,24 @@ struct hello_st {
 
 struct request_st {
     buffer                  *wb, *rb;
-    struct request          request;
     struct request_parser   parser;
     int                     *fd;
     fd_interest             duplex;
     struct request_st       *other;
+    struct request_queue    *request_queue;
 
 };
+
+struct response_st {
+    buffer                  *wb, *rb;
+    int                     *fd;
+    fd_interest             duplex;
+    struct request_st       *other;
+    struct request_queue    *request_queue;
+
+};
+
+
 
 struct pop3 {
     /** información del cliente */
@@ -66,10 +77,12 @@ struct pop3 {
     union {
         struct hello_st hello;
         struct request_st request;
+        struct response_st response;
     } client;
     /** estados para el origin_fd */
     union {
         struct request_st request;
+        struct response_st response;
     } origin;
 
     /** buffers para ser usados read_buffer, write_buffer.*/
@@ -455,6 +468,7 @@ compute_read_interests(fd_selector s, struct request_st *d) {
     return ret;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // HELLO
 ////////////////////////////////////////////////////////////////////////////////
@@ -537,6 +551,7 @@ request_init(const unsigned state, struct selector_key *key) {
     d->wb        = &ATTACHMENT(key)->write_buffer;
     d->duplex    = OP_READ | OP_WRITE;
     d->other     = &ATTACHMENT(key)->origin.request;
+    d->request_queue = ATTACHMENT(key)->request_queue;
 
     d = &ATTACHMENT(key)->origin.request;
     d->fd       = &ATTACHMENT(key)->origin_fd;
@@ -544,11 +559,12 @@ request_init(const unsigned state, struct selector_key *key) {
     d->wb       = &ATTACHMENT(key)->read_buffer;
     d->duplex   = OP_READ | OP_WRITE;
     d->other    = &ATTACHMENT(key)->client.request;
+    d->request_queue = ATTACHMENT(key)->request_queue;
 
 }
 
 static unsigned
-request_process(struct selector_key *key, struct request_st *d);
+request_process(struct request_st *d);
 
 static unsigned
 request_read(struct selector_key *key) {
@@ -568,7 +584,7 @@ request_read(struct selector_key *key) {
             buffer_write_adv(rb, n);
             int st = request_consume(rb, wb, &d->parser, 0);
             if (request_is_done(st, 0)) {
-                ret = request_process(key, d);
+                ret = request_process(d);
             } else {
                 //TODO el request esta incompleto.
                 ret = REQUEST;
@@ -582,14 +598,26 @@ request_read(struct selector_key *key) {
             d->other->duplex &= ~OP_WRITE;
         }
     }
+
     return ret;
 }
 
 /**Process the request*/
 static unsigned
-request_process(struct selector_key *key, struct request_st *d){
-    struct pop3 *pop3 = ATTACHMENT(key);
-    queue_request(pop3->request_queue, d->request);
+request_process(struct request_st *d) {
+    unsigned ret;
+    queue_request(d->request_queue, d->parser.request);
+
+    fd_interest client = compute_read_interests(key->s, d);
+    fd_interest origin = compute_write_interests(key->s, d->other);
+    if(client == OP_NOOP && origin == OP_NOOP) {
+        compute_read_interests(key->s, d->other);
+        compute_write_interests(key->s, d);
+        ret = RESPONSE;
+    } else {
+        ret = REQUEST;
+    }
+    return ret;
 }
 
 static void
@@ -645,42 +673,55 @@ request_write(struct selector_key *key) {
 static void
 response_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
-    struct request_st *d = &p->client.request;
-    request_parser_init(&d->parser);
+    struct request_st *d = &p->client.response;
 
     d->fd        = &ATTACHMENT(key)->client_fd;
     d->rb        = &ATTACHMENT(key)->read_buffer;
     d->wb        = &ATTACHMENT(key)->write_buffer;
     d->duplex    = OP_READ | OP_WRITE;
     d->other     = &ATTACHMENT(key)->origin.request;
+    d->request_queue = ATTACHMENT(key)->request_queue;
 
-    d = &ATTACHMENT(key)->origin.request;
+    d = &ATTACHMENT(key)->origin.response;
     d->fd       = &ATTACHMENT(key)->origin_fd;
     d->rb       = &ATTACHMENT(key)->write_buffer;
     d->wb       = &ATTACHMENT(key)->read_buffer;
     d->duplex   = OP_READ | OP_WRITE;
     d->other    = &ATTACHMENT(key)->client.request;
+    d->request_queue = ATTACHMENT(key)->request_queue;
 
 }
 static unsigned
 response_read(struct selector_key *key){
-    struct request_st * d = &ATTACHMENT(key)->client.request;
+    struct request_st * d = &ATTACHMENT(key)->client.response;
 
     buffer *rb      = d->rb;
     buffer *wb      = d->wb;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
+    unsigned ret;
+
     //TODO: PARSEAR EL RESPONSE Y DEMAS;
     ptr = buffer_write_ptr(wb, &count);
     n = recv(key->fd, ptr, count, 0);
 
-    return RESPONSE;
+    fd_interest client = compute_read_interests(key->s, d);
+    fd_interest origin = compute_write_interests(key->s, d->other);
+    if(client == OP_NOOP && origin == OP_NOOP){
+        compute_read_interests(key->s, d->other);
+        compute_write_interests(key->s, d);
+        ret = RESPONSE;
+    } else {
+        ret = REQUEST;
+    }
+
+    return ret;
 }
 
 static unsigned
 response_write(struct selector_key *key){
-    struct request_st *d = &ATTACHMENT(key)->client.request;
+    struct request_st *d = &ATTACHMENT(key)->origin.request;
 
     unsigned ret    = REQUEST;
      uint8_t *ptr;
