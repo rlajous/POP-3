@@ -25,6 +25,8 @@ enum pop3_state {
     HELLO,
     REQUEST,
     RESPONSE,
+    TRANSFORM,
+    APPEND_CAPA,
     DONE,
     ERROR,
 };
@@ -570,6 +572,28 @@ request_init(const unsigned state, struct selector_key *key) {
 
 }
 
+static bool
+should_transform(struct request *request) {
+    return false;
+}
+
+static bool
+should_append_capa(struct request *request) {
+    return false;
+}
+
+static enum pop3_state
+determine_response_state(struct request_queue *q){
+    struct request *r = peek_request(q);
+
+    if(should_transform(r))
+        return TRANSFORM;
+    if(should_append_capa(r))
+        return APPEND_CAPA;
+
+    return RESPONSE;
+}
+
 static unsigned
 request_process(struct selector_key *key) {
     struct request_st * d     = &ATTACHMENT(key)->client.request;
@@ -587,7 +611,7 @@ request_process(struct selector_key *key) {
     if(client == OP_NOOP && origin == OP_NOOP) {
         compute_write_interests(key->s, d->rb, d->duplex, *d->fd);
         compute_read_interests(key->s, other->wb, other->duplex, *other->fd);
-        ret = RESPONSE;
+        ret = determine_response_state(d->request_queue);
     }
 
     return ret;
@@ -659,7 +683,7 @@ request_write(struct selector_key *key) {
         if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb)) {
             compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
             compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
-            ret = RESPONSE;
+            ret = determine_response_state(d->request_queue);
         }
     }
 
@@ -692,16 +716,6 @@ response_init(const unsigned state, struct selector_key *key) {
 
 }
 
-static bool
-should_transform(struct request *request) {
-    return false;
-}
-
-static bool
-should_append_capa(struct request *request) {
-    return false;
-}
-
 static unsigned
 response_process(struct response_st *d, struct selector_key *key);
 
@@ -725,25 +739,19 @@ response_read(struct selector_key *key){
         while(buffer_can_read(rb)) {
             buffer_write_adv(rb, n);
             request = peek_request(q);
-            if(should_transform(request)){
-                //jump to transform state
-            } else if(should_append_capa(request)){
-                //append pipelining capa response
+            int st = response_consume(rb, wb, &d->parser, 0);
+            if(response_is_done(st, 0)){
+                ret = response_process(d, key);
             } else {
-                int st = response_consume(rb, wb, &d->parser, 0);
-                if(response_is_done(st, 0)){
-                    ret = response_process(d, key);
-                } else {
-                    ret = RESPONSE;
-                }
+                ret = RESPONSE;
+
             }
         }
-        fd_interest origin = compute_read_interests(key->s, d->wb, d->duplex, *d->fd);
+        fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
         fd_interest client = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
 
         if(client == OP_NOOP && origin == OP_NOOP) {
-            compute_write_interests(key->s, d->wb, d->duplex, *d->fd);
-            compute_read_interests(key->s, other->rb, other->duplex, *other->fd);
+
             ret = REQUEST;
         }
     //TODO: Checkear temas de shutdown
@@ -763,9 +771,14 @@ static unsigned
 response_process(struct response_st *d, struct selector_key *key) {
     unsigned ret;
     pop_request(d->request_queue);
+    struct response_st *other  = d->other;
 
-    if(queue_is_empty(d->request_queue) || !ATTACHMENT(key)->pipeliner) {
-        //TODO: Switch interests
+    fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
+    fd_interest client = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
+
+    if(client == OP_NOOP && origin == OP_NOOP) {
+        compute_write_interests(key->s, d->wb, d->duplex, *d->fd);
+        compute_read_interests(key->s, other->rb, other->duplex, *other->fd);
         ret = REQUEST;
     } else {
         ret = RESPONSE;
