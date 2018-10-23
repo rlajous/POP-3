@@ -13,6 +13,7 @@
 #include "../utils/proxyArguments.h"
 #include "../utils/request.h"
 #include "../utils/request_queue.h"
+#include "../utils/response.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -44,6 +45,7 @@ struct request_st {
 
 struct response_st {
     buffer                  *wb, *rb;
+    struct response_parser  parser;
     int                     *fd;
     fd_interest             duplex;
     struct response_st      *other;
@@ -95,6 +97,9 @@ struct pop3 {
 
     /** cantidad de referencias a este objeto. si es uno se debe destruir */
     unsigned references;
+
+    /** Identifica si el servidor de origen soporta pipelining o no*/
+    bool pipeliner;
 
     /** siguiente en el pool */
     struct pop3 *next;
@@ -686,6 +691,20 @@ response_init(const unsigned state, struct selector_key *key) {
     d->request_queue = p->request_queue;
 
 }
+
+static bool
+should_transform(struct request *request) {
+    return false;
+}
+
+static bool
+should_append_capa(struct request *request) {
+    return false;
+}
+
+static unsigned
+response_process(struct response_st *d, struct selector_key *key);
+
 static unsigned
 response_read(struct selector_key *key){
     struct response_st *d = &ATTACHMENT(key)->origin.response;
@@ -696,13 +715,29 @@ response_read(struct selector_key *key){
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
+    struct request_queue *q = d->request_queue;
+    struct request *request;
     unsigned ret = RESPONSE;
 
-    //TODO: PARSEAR EL RESPONSE Y DEMAS;
-    ptr = buffer_write_ptr(wb, &count);
+    ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-        buffer_write_adv(wb, n);
+        while(buffer_can_read(rb)) {
+            buffer_write_adv(rb, n);
+            request = peek_request(q);
+            if(should_transform(request)){
+                //jump to transform state
+            } else if(should_append_capa(request)){
+                //append pipelining capa response
+            } else {
+                int st = response_consume(rb, wb, &d->parser, 0);
+                if(response_is_done(st, 0)){
+                    ret = response_process(d, key);
+                } else {
+                    ret = RESPONSE;
+                }
+            }
+        }
         fd_interest origin = compute_read_interests(key->s, d->wb, d->duplex, *d->fd);
         fd_interest client = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
 
@@ -711,7 +746,7 @@ response_read(struct selector_key *key){
             compute_read_interests(key->s, other->rb, other->duplex, *other->fd);
             ret = REQUEST;
         }
-
+    //TODO: Checkear temas de shutdown
     } else {
         shutdown(*d->fd, SHUT_RD);
         d->duplex &= ~OP_READ;
@@ -719,8 +754,22 @@ response_read(struct selector_key *key){
             shutdown(*d->other->fd, SHUT_WR);
             d->other->duplex &= ~OP_WRITE;
         }
-    }
 
+    }
+    return ret;
+}
+
+static unsigned
+response_process(struct response_st *d, struct selector_key *key) {
+    unsigned ret;
+    pop_request(d->request_queue);
+
+    if(queue_is_empty(d->request_queue) || !ATTACHMENT(key)->pipeliner) {
+        //TODO: Switch interests
+        ret = REQUEST;
+    } else {
+        ret = RESPONSE;
+    }
     return ret;
 }
 
@@ -728,6 +777,7 @@ static unsigned
 response_write(struct selector_key *key){
     struct response_st *d      = &ATTACHMENT(key)->client.response;
     struct response_st *other  = d->other;
+
 
     unsigned ret    = REQUEST;
     uint8_t *ptr;
