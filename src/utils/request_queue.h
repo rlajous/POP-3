@@ -31,6 +31,9 @@ queue_request(struct request_queue *q, struct request *request);
 struct request*
 pop_request(struct request_queue *q);
 
+struct request*
+peek_request(struct request_queue *q);
+
 extern bool
 queue_is_empty(struct request_queue *q);
 
