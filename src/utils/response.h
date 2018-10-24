@@ -4,17 +4,23 @@
 #include <stdint.h>
 #include "buffer.h"
 enum response_state {
-    response_unidentified,
-    response_success,
+    response_detect_status,
+    response_new_line,
+    response_dot,
+    response_dot_cr,
+    response_byte,
+    response_cr,
+    response_done,
     response_error,
 };
 
 struct response {
-    bool success;
+    bool pop3_response_success;
 };
 
 struct response_parser {
     enum response_state response_state;
+    struct response *response;
     bool multi;
 };
 
