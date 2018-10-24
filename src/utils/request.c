@@ -5,6 +5,9 @@
 #include "request.h"
 #include "buffer.h"
 
+
+#define N(x) (sizeof(x)/sizeof((x)[0]))
+
 static void
 remaining_set(struct request_parser* p, const uint8_t n) {
     p->i = 0;
@@ -25,7 +28,7 @@ remaining_is_done(struct request_parser* p) {
 bool
 request_identify_cmd(struct request_parser* p) {
 
-    for(int i = 0; i < 9 ; i++){
+    for(int i = 0; i <  N(POP3_CMDS_INFO); i++){
         if(0 == strcmp(p->cmd_buffer, POP3_CMDS_INFO[i].string_representation)){
             p->request.cmd = POP3_CMDS_INFO[i].request_cmd;
             p->request.multi = POP3_CMDS_INFO[i].multi;
@@ -59,32 +62,21 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
             remaining_set(p, MAX_ARG_LENGTH);
             return request_arg;
         }
-        return request_invalid_cmd_error;
     }
     /** recieve a CR*/
     if(c == '\r'){
-        if(!request_identify_cmd(p)) {
-            return request_invalid_cmd_error;
-        }
-        if(!has_minimum_nargs(p)) {
-            return request_missing_args_error;
-        }
+        request_identify_cmd(p);
         remaining_set(p, 1);
         return request_CR;
 
     }
-    /** LF without CR*/
-    if(c == '\n'){
-        return request_invalid_termination_error;
-    }
 
     /** Arguments have a max length of 4 chars */
-    if(remaining_is_done(p)){
-        return request_length_error;
+    if(!remaining_is_done(p)){
+        char append = (char)tolower(c);
+        p->cmd_buffer[p->i++] = append;
     }
-    
-    char append = (char)tolower(c);
-    p->cmd_buffer[p->i++] = append;
+
     return request_cmd;
 }
  
@@ -92,15 +84,11 @@ enum request_state
 request_parse_arg(struct request_parser *p, const uint8_t c){
     /** recieve a CF */
     if(c == '\r'){
+        p->request.nargs++;
+        p->request.arg[p->request.nargs-1][p->i] = '\0';
         if(has_minimum_nargs(p)){
             return request_CR;
         }
-        return  request_missing_args_error;
-    }
-
-    /** LF without CR*/
-    if(c == '\n'){
-        return request_invalid_termination_error;
     }
 
     if(has_maximum_nargs(p)){
@@ -160,11 +148,11 @@ request_parser_feed(struct request_parser* p, const uint8_t c){
 extern void
 request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
-    p->request.cmd = unknown;
-    p->request.multi = false;
     remaining_set(p, MAX_CMD_LENGTH);
     memset(&p->request, 0, sizeof(p->request));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
+    p->request.cmd = unknown;
+    p->request.multi = false;
     p->request.nargs  = 0;
 }
 

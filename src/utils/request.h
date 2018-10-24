@@ -21,6 +21,9 @@ enum pop3_req_cmd{
     uidl,
     top,
     apop,
+    capa,
+    user,
+    pass,
     unknown,
 };
 
@@ -121,6 +124,26 @@ static struct pop3_cmd_data POP3_CMDS_INFO[] ={
           .min_args                 = 2,
           .multi                    = false,
         },
+        { .request_cmd              = capa,
+          .string_representation    = "capa",
+          .max_args                 = 0,
+          .min_args                 = 0,
+          .multi                    = true,
+        },
+        {
+          .request_cmd            = user,
+          .string_representation  = "user",
+          .max_args               = 1,
+          .min_args               = 1,
+          .multi                  = false,
+        },
+        {
+          .request_cmd            = pass,
+          .string_representation  = "pass",
+          .max_args               = 1,
+          .min_args               = 1,
+          .multi                  = false,
+        }
 
 };
 
