@@ -14,10 +14,12 @@
 #include "../utils/request.h"
 #include "../utils/request_queue.h"
 #include "../utils/response.h"
+#include "../utils/metrics.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 extern arguments proxyArguments;
+extern metrics  *proxy_metrics;
 
 enum pop3_state {
     RESOLVE_ADDRESS,
@@ -238,6 +240,10 @@ proxyPop3_passive_accept(struct selector_key *key){
     if(SELECTOR_SUCCESS != selector_register(key->s, client, &pop3_handler, OP_WRITE, state)) {
         goto fail;
     }
+
+    proxy_metrics->concurrent_connections++;
+    proxy_metrics->historic_connections++;
+
     return;
 
 fail:
@@ -906,6 +912,9 @@ pop3_done(struct selector_key* key) {
             ATTACHMENT(key)->client_fd,
             ATTACHMENT(key)->origin_fd,
     };
+
+    proxy_metrics->concurrent_connections--;
+
     for(unsigned i = 0; i < N(fds); i++) {
         if(fds[i] != -1) {
             if(SELECTOR_SUCCESS != selector_unregister_fd(key->s, fds[i])) {

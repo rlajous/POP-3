@@ -11,9 +11,11 @@
 #include "utils/selector.h"
 #include "proxy/proxyPop3nio.h"
 #include "utils/proxyArguments.h"
+#include "utils/metrics.h"
 
 static bool done = false;
 arguments proxyArguments;
+metrics  *proxy_metrics;
 
 static void
 sigterm_handler(const int signal){
@@ -24,6 +26,8 @@ sigterm_handler(const int signal){
 int
 main(const int argc, char * const *argv){
     proxyArguments = parse_arguments(argc, argv);
+    proxy_metrics  = malloc(sizeof(metrics));
+    memset(proxy_metrics, 0, sizeof(metrics));
 
     close(0);
 
@@ -121,6 +125,10 @@ finally:
     selector_close();
 
     pop3_pool_destroy();
+
+    destroy_arguments(proxyArguments);
+
+    free(proxy_metrics);
 
     if(server >= 0) {
         close(server);
