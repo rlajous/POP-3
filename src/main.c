@@ -7,6 +7,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <signal.h>
+#include <netdb.h>
 
 #include "utils/selector.h"
 #include "proxy/proxyPop3nio.h"
@@ -23,6 +24,28 @@ sigterm_handler(const int signal){
     done = true;
 }
 
+bool
+resolve_address(char *address, uint16_t port, struct addrinfo ** addrinfo) {
+
+  struct addrinfo addr = {
+          .ai_family    = AF_UNSPEC,    /* Allow IPv4 or IPv6 */
+          .ai_socktype  = SOCK_STREAM,
+          .ai_flags     = AI_PASSIVE,   /* For wildcard IP address */
+          .ai_protocol  = 0,            /* Any protocol */
+          .ai_canonname = NULL,
+          .ai_addr      = NULL,
+          .ai_next      = NULL,
+  };
+
+  char buff[7];
+  snprintf(buff, sizeof(buff), "%hu", port);
+  if (0 != getaddrinfo(address, buff, &addr,
+                       addrinfo)){
+    return false;
+  }
+  return true;
+}
+
 int
 main(const int argc, char * const *argv){
     proxyArguments = parse_arguments(argc, argv);
@@ -35,13 +58,15 @@ main(const int argc, char * const *argv){
     selector_status ss = SELECTOR_SUCCESS;
     fd_selector selector = NULL;
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port        = htons(proxyArguments->pop3_port);
+    struct addrinfo *pop3_addr;
 
-    const int server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(resolve_address(proxyArguments->pop3_address,
+                       proxyArguments->pop3_port, &pop3_addr) == false) {
+      err_msg = "unable to resolve address";
+      goto finally;
+    }
+
+    const int server = socket(pop3_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
     if(server < 0){
         err_msg = "unable to create socket";
         goto finally;
@@ -50,14 +75,22 @@ main(const int argc, char * const *argv){
 
     setsockopt(server, SOL_SOCKET,SO_REUSEADDR,&(int){1}, sizeof(int));
 
-    if(bind(server, (struct sockaddr*)&addr, sizeof(addr)) < 0){
+    struct addrinfo *pop3_curr = pop3_addr;
+
+    do {
+      if(bind(server, pop3_curr->ai_addr, pop3_curr->ai_addrlen) < 0){
         err_msg = "Unable to bind socket";
         goto finally;
-    }
+      }
+      pop3_curr = pop3_curr->ai_next;
+    } while(pop3_curr != NULL);
+
     if(listen(server, 20) < 0){
         err_msg = "Unable to listen";
         goto finally;
     }
+
+    freeaddrinfo(pop3_addr);
 
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT, sigterm_handler);
@@ -78,7 +111,7 @@ main(const int argc, char * const *argv){
         err_msg = "initilizing selector";
         goto finally;
     }
-    selector = selector_new(1024);
+    selector = selector_new(64);
     if(selector == NULL) {
         err_msg = "unable to create selector";
         goto finally;

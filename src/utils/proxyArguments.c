@@ -12,6 +12,7 @@
 #define DEFAULT_PROXY_PORT 1110
 #define DEFAULT_CONFIG_PORT 9090
 #define LOOPBACK "127.0.0.1"
+#define POP3 "0.0.0.0"
 #define DEFAULT_REPLACEMENT_MESSAGE "Parte Reemplazada."
 #define DEFAULT_ERROR_FILE "/dev/null"
 #define VERSION "0.0.1"
@@ -126,7 +127,7 @@ init_arguments() {
   ret->origin_address     = NULL;
   ret->origin_port        = DEFAULT_ORIGIN_PORT;
 
-  ret->pop3_address       = NULL;
+  ret->pop3_address       = init_default_string(POP3);
   ret->pop3_port          = DEFAULT_PROXY_PORT;
 
   ret->config_address     = init_default_string(LOOPBACK);
