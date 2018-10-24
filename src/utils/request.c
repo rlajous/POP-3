@@ -161,6 +161,7 @@ extern void
 request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
     p->request.cmd = unknown;
+    p->request.multi = false;
     remaining_set(p, MAX_CMD_LENGTH);
     memset(&p->request, 0, sizeof(p->request));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
