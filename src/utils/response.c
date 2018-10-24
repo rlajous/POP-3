@@ -3,6 +3,7 @@
 //
 
 #include <string.h>
+#include <stdlib.h>
 #include "response.h"
 #include "request.h"
 
@@ -10,9 +11,9 @@
 enum response_state
 detect_status(struct response_parser *p, const uint8_t c) {
     if(c == '+'){
-        p->response->pop3_response_success = true;
+        p->pop3_response_success = true;
     } else if (c == '-') {
-        p->response->pop3_response_success = false;
+        p->pop3_response_success = false;
     }
     return response_byte;
 }
@@ -56,8 +57,8 @@ byte(struct response_parser *p, const uint8_t c) {
 
 enum response_state
 cr(struct response_parser *p, const uint8_t c) {
-    if(c == '\r'){
-        if(p->multi) {
+    if(c == '\n'){
+        if(p->request->multi) {
             return response_new_line;
         } else {
             return response_done;
@@ -101,10 +102,10 @@ response_parser_feed(struct response_parser *p, const uint8_t c) {
 }
 
 extern void
-response_parser_init(struct response_parser *p) {
+response_parser_init(struct response_parser *p, struct request* request) {
     p->response_state = response_detect_status;
-    p->response->pop3_response_success = NULL;
-    memset(&p->response, 0, sizeof(p->response));
+    p->pop3_response_success = NULL;
+    p->request = request;
 }
 
 extern bool
@@ -117,17 +118,9 @@ response_is_done(enum response_state st, bool *errored) {
 enum response_state
 response_consume(buffer *rb, buffer *wb, struct response_parser *p, bool *errored){
     enum response_state st = p->response_state;
-    while(buffer_can_read(rb)){
-        if(!buffer_can_write(wb)){
-            break;
-        }
-        const  uint8_t c = buffer_read(rb);
-        st = response_parser_feed(p, c);
-        buffer_write(wb, c);
-        if(response_is_done(st, errored)) {
-            break;
-        }
-    }
+    const  uint8_t c = buffer_read(rb);
+    st = response_parser_feed(p, c);
+    buffer_write(wb, c);
     return st;
 }
 
@@ -135,5 +128,5 @@ response_consume(buffer *rb, buffer *wb, struct response_parser *p, bool *errore
 
 void
 response_close(struct response_parser *p) {
-    //TODO: checkear frees
+    free(p->request);
 }

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include "buffer.h"
+#include "request.h"
+
 enum response_state {
     response_detect_status,
     response_new_line,
@@ -14,18 +16,14 @@ enum response_state {
     response_error,
 };
 
-struct response {
-    bool pop3_response_success;
-};
-
 struct response_parser {
     enum response_state response_state;
-    struct response *response;
-    bool multi;
+    bool pop3_response_success;
+    struct request* request;
 };
 
 void
-response_parser_init(struct response_parser *p);
+response_parser_init(struct response_parser *p, struct request *request);
 
 bool
 response_is_done(enum response_state st, bool *errored);
