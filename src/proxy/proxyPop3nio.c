@@ -24,6 +24,7 @@ extern metrics  *proxy_metrics;
 enum pop3_state {
     RESOLVE_ADDRESS,
     CONNECTING,
+    CAPA,
     HELLO,
     REQUEST,
     RESPONSE,
@@ -35,6 +36,15 @@ enum pop3_state {
 
 struct hello_st {
     buffer              *wb;
+};
+
+#define CAPA_CMD 6
+
+struct capa_st {
+    char    message[CAPA_CMD];
+    size_t  remaining;
+    char    *current;
+    buffer  *wb;
 };
 
 struct request_st {
@@ -82,13 +92,14 @@ struct pop3 {
     /** estados para el client_fd */
     //TODO: Revisar request response union
     union {
-        struct hello_st hello;
-        struct request_st request;
-        struct response_st response;
+        struct hello_st     hello;
+        struct request_st   request;
+        struct response_st  response;
     } client;
     /** estados para el origin_fd */
     union {
-        struct request_st request;
+        struct capa_st     capa;
+        struct request_st  request;
         struct response_st response;
     } origin;
 
@@ -155,6 +166,7 @@ static struct pop3 * pop3_new(int client_fd){
     ret->request_queue = malloc(sizeof(struct request_queue));
     queue_init(ret->request_queue);
 
+    ret->pipeliner = false;
     ret->references = 1;
 finally:
     return ret;
@@ -457,7 +469,79 @@ connecting(struct selector_key *key) {
     s |= selector_set_interest    (key->s, p->client_fd, OP_NOOP);
     s |= selector_set_interest_key(key,                  OP_READ);
     return SELECTOR_SUCCESS == s ? HELLO : ERROR;
+////////////////////////////////////////////////////////////////////////////////
+/// CAPA
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+capa_init(const unsigned state, struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct capa_st  *d = &p->origin.capa;
+    memcpy(d->message, "CAPA\r\n", CAPA_CMD);
+    d->remaining = CAPA_CMD;
+    d->current   = d->message;
+    d->wb        = &(p->write_buffer);
 }
+
+static unsigned
+capa_read(struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct capa_st  *d = &p->origin.capa;
+    unsigned  ret      = CAPA;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(d->wb, &count);
+    n   = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        buffer_write_adv(d->wb, n);
+        
+        //TODO: RESPONSE PARSING
+    } else {
+        ret = ERROR;
+    }
+
+    return ret;
+}
+
+static unsigned
+capa_write(struct selector_key *key) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct capa_st  *d = &p->origin.capa;
+
+    unsigned  ret      = CAPA;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    if(d->remaining > 0) {
+        ptr = buffer_write_ptr(d->wb, &count);
+        count = count >= d->remaining ? d->remaining : count;
+        memcpy(ptr, d->current, count);
+        buffer_write_adv(d->wb, count);
+        d->remaining -= count;
+        d->current   += count;
+    }
+
+    ptr = buffer_read_ptr(d->wb, &count);
+    n   = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n > 0) {
+        buffer_read_adv(d->wb, n);
+        if(!buffer_can_read(d->wb) && d->remaining == 0) {
+            if( SELECTOR_SUCCESS != selector_set_interest_key(key, OP_READ)) {
+                //TODO: SEND ERROR MESSAGE
+                ret = ERROR;
+            }
+        }
+    } else {
+        //TODO: SEND ERROR MESSAGE
+        ret = ERROR;
+    }
+
+    return ret;
+}
+
 
 static fd_interest
 compute_write_interests(fd_selector s, buffer * b, fd_interest duplex, int fd) {
@@ -833,6 +917,11 @@ static const struct state_definition proxy_states[] = {
         },{
                 .state            = CONNECTING,
                 .on_write_ready   = connecting
+        },{
+                .state            = CAPA,
+                .on_arrival       = capa_init,
+                .on_read_ready    = capa_read,
+                .on_write_ready   = capa_write,
         },{
                 .state            = HELLO,
                 .on_arrival       = hello_init,
