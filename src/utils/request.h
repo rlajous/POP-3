@@ -21,6 +21,7 @@ enum pop3_req_cmd{
     uidl,
     top,
     apop,
+    unknown,
 };
 
 enum request_state {

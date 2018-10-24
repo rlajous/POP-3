@@ -160,6 +160,7 @@ request_parser_feed(struct request_parser* p, const uint8_t c){
 extern void
 request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
+    p->request.cmd = unknown;
     remaining_set(p, MAX_CMD_LENGTH);
     memset(&p->request, 0, sizeof(p->request));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
@@ -204,4 +205,4 @@ request_close(struct request_parser *p) {
     //Creo que no hay nada que hacer.
 }
 
-//TODO(fran): habría que implementar el marshall
+//TODO(fran): habría que implementar el marshall?
