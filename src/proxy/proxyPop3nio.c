@@ -584,12 +584,12 @@ should_append_capa(struct request *request) {
 
 static enum pop3_state
 determine_response_state(struct request_queue *q){
-    struct request *r = peek_request(q);
-
-    if(should_transform(r))
-        return TRANSFORM;
-    if(should_append_capa(r))
-        return APPEND_CAPA;
+//    struct request *r = peek_request(q);
+//
+//    if(should_transform(r))
+//        return TRANSFORM;
+//    if(should_append_capa(r))
+//        return APPEND_CAPA;
 
     return RESPONSE;
 }
@@ -680,7 +680,7 @@ request_write(struct selector_key *key) {
         if(buffer_can_read(d->rb)) {
             ret = request_process(key);
         }
-        if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb)) {
+        if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb) && !queue_is_empty(d->request_queue)) {
             compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
             compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
             ret = determine_response_state(d->request_queue);
@@ -713,6 +713,7 @@ response_init(const unsigned state, struct selector_key *key) {
     d->duplex   = OP_READ | OP_WRITE;
     d->other    = &p->client.response;
     d->request_queue = p->request_queue;
+    response_parser_init(&d->parser, pop_request(d->request_queue));
 
 }
 
@@ -736,24 +737,24 @@ response_read(struct selector_key *key){
     ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
+        buffer_write_adv(rb, n);
         while(buffer_can_read(rb)) {
-            buffer_write_adv(rb, n);
-            request = peek_request(q);
+            if(!buffer_can_write(wb)){
+                break;
+            }
             int st = response_consume(rb, wb, &d->parser, 0);
             if(response_is_done(st, 0)){
-                ret = response_process(d, key);
+                response_close(&d->parser);
+                if(!queue_is_empty(d->request_queue)) {
+                    request = pop_request(d->request_queue);
+                    response_parser_init(&d->parser, request);
+                    ret = response_process(d, key);
+                }
             } else {
                 ret = RESPONSE;
-
             }
         }
-        fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
-        fd_interest client = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
-
-        if(client == OP_NOOP && origin == OP_NOOP) {
-
-            ret = REQUEST;
-        }
+        ret = response_process(d, key);
     //TODO: Checkear temas de shutdown
     } else {
         shutdown(*d->fd, SHUT_RD);
@@ -770,7 +771,6 @@ response_read(struct selector_key *key){
 static unsigned
 response_process(struct response_st *d, struct selector_key *key) {
     unsigned ret;
-    pop_request(d->request_queue);
     struct response_st *other  = d->other;
 
     fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
@@ -843,6 +843,10 @@ static const struct state_definition proxy_states[] = {
                 .on_arrival       = response_init,
                 .on_write_ready   = response_write,
                 .on_read_ready    = response_read,
+        },{
+                .state            = TRANSFORM,
+        },{
+                .state            = APPEND_CAPA,
         },{
                 .state            = DONE
         },{
