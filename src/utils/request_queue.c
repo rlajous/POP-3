@@ -16,6 +16,7 @@ queue_init(struct request_queue *q) {
 void
 queue_request(struct request_queue *q, struct request *request) {
     struct node *node = malloc(sizeof(struct node));
+    node->next = NULL;
     node->request = malloc(sizeof(struct request));
     memcpy(node->request, request, sizeof(struct request));
 
@@ -24,7 +25,8 @@ queue_request(struct request_queue *q, struct request *request) {
     } else {
         q->last->next = node;
     }
-    q->last = node;
+    q->last  = node;
+    q->size++;
 }
 
 struct request*
@@ -32,8 +34,17 @@ pop_request(struct request_queue *q) {
     struct node *node = q->first;
     struct request *request = node->request;
     q->first = node->next;
+    if(q->first == NULL) {
+        q->last = NULL;
+    }
+    q->size--;
     free(node);
     return request;
+}
+
+struct request*
+peek_request(struct request_queue *q) {
+    return q->first->request;
 }
 
 extern bool
