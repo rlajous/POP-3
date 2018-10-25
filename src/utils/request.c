@@ -104,6 +104,7 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
     if(!remaining_is_done(p)){
         char current_char = (char)c;
         p->request.arg[p->request.nargs][p->i++] = current_char;
+        p->request.argsize[p->request.nargs]++;
         return request_arg;
     } else {
         return request_arg;

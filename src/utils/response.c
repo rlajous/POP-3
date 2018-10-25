@@ -104,7 +104,7 @@ response_parser_feed(struct response_parser *p, const uint8_t c) {
 extern void
 response_parser_init(struct response_parser *p, struct request* request) {
     p->response_state = response_detect_status;
-    p->pop3_response_success = NULL;
+    p->pop3_response_success = false;
     p->request = request;
 }
 

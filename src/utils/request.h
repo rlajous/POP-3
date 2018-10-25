@@ -44,6 +44,7 @@ enum request_state {
 struct request {
     enum pop3_req_cmd   cmd;
     char                arg[MAX_ARGUMENTS][MAX_ARG_LENGTH + 1];
+    size_t              argsize[2];
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
     bool                multi;

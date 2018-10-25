@@ -116,6 +116,12 @@ struct pop3 {
     /** Identifica si el servidor de origen soporta pipelining o no*/
     bool pipeliner;
 
+    /** Identifica el nombre de usuario del usuario logeado */
+    char *username;
+
+    /** true si el username fue validado con un pass, falso de lo contrario */
+    bool verified_username;
+
     /** siguiente en el pool */
     struct pop3 *next;
 
@@ -179,6 +185,12 @@ pop3_destroy_(struct pop3* p){
     if(p->origin_resolution != NULL){
         freeaddrinfo(p->origin_resolution);
         p->origin_resolution = 0;
+    }
+    if(p->request_queue != NULL){
+        free(p->request_queue);
+    }
+    if(p->username != NULL){
+        free(p->username);
     }
     free(p);
 }
@@ -434,27 +446,27 @@ resolve_connect(struct selector_key *key) {
 static unsigned
 connecting(struct selector_key *key) {
     int error;
-    socklen_t   len    = sizeof(error);
-    struct pop3 *p     = ATTACHMENT(key);
-    unsigned    ret;
+    socklen_t len = sizeof(error);
+    struct pop3 *p = ATTACHMENT(key);
+    unsigned ret;
 
     if (getsockopt(key->fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
         //TODO: ERROR
         return ERROR;
     } else {
-        if(error == 0) {
+        if (error == 0) {
             p->origin_fd = key->fd;
         } else {
             selector_unregister_fd(key->s, key->fd);
             close(key->fd);
-            if(next_origin_resolution(key) == true) {
-                struct selector_key* k = malloc(sizeof(*key));
-                if(k == NULL) {
+            if (next_origin_resolution(key) == true) {
+                struct selector_key *k = malloc(sizeof(*key));
+                if (k == NULL) {
                     ret = ERROR;
-                } else { 
+                } else {
                     memcpy(k, key, sizeof(*k));
                     k->fd = p->client_fd;
-                    ret   = resolve_connect(k);
+                    ret = resolve_connect(k);
                     free(k);
                 }
                 return ret;
@@ -466,9 +478,10 @@ connecting(struct selector_key *key) {
 
     selector_status s = SELECTOR_SUCCESS;
 
-    s |= selector_set_interest    (key->s, p->client_fd, OP_NOOP);
-    s |= selector_set_interest_key(key,                  OP_READ);
+    s |= selector_set_interest(key->s, p->client_fd, OP_NOOP);
+    s |= selector_set_interest_key(key, OP_READ);
     return SELECTOR_SUCCESS == s ? HELLO : ERROR;
+}
 ////////////////////////////////////////////////////////////////////////////////
 /// CAPA
 ////////////////////////////////////////////////////////////////////////////////
@@ -807,6 +820,18 @@ response_init(const unsigned state, struct selector_key *key) {
 
 }
 
+static void
+write_user(struct selector_key *key, char *username){
+    struct pop3 *pop3 = ATTACHMENT(key);
+    pop3->username = username;
+}
+
+static void
+lock_user(struct selector_key *key){
+    struct pop3 *pop3 = ATTACHMENT(key);
+    pop3->verified_username = true;
+}
+
 static unsigned
 response_process(struct response_st *d, struct selector_key *key);
 
@@ -817,6 +842,7 @@ response_read(struct selector_key *key){
 
     buffer *rb      = d->rb;
     buffer *wb      = d->wb;
+    struct response_parser *p = &d->parser;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
@@ -832,12 +858,20 @@ response_read(struct selector_key *key){
             if(!buffer_can_write(wb)){
                 break;
             }
-            int st = response_consume(rb, wb, &d->parser, 0);
+            int st = response_consume(rb, wb, p, 0);
             if(response_is_done(st, 0)){
-                response_close(&d->parser);
+                if(p->request->cmd == user && p->pop3_response_success == true){
+                    char *username = malloc(p->request->argsize[0]);
+                    memcpy(username, p->request->arg[0], p->request->argsize[0]);
+                    write_user(key, username);
+                }
+                if(p->request->cmd == pass && p->pop3_response_success == true){
+                    lock_user(key);
+                }
+                response_close(p);
                 if(!queue_is_empty(d->request_queue)) {
                     request = pop_request(d->request_queue);
-                    response_parser_init(&d->parser, request);
+                    response_parser_init(p, request);
                     ret = response_process(d, key);
                 }
             } else {
