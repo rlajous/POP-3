@@ -3,6 +3,7 @@
 
 #include <glob.h>
 #include <stdint.h>
+#include "../utils/buffer.h"
 
 /**  The SPCP request is formed as follows:
  *
@@ -36,7 +37,7 @@
 enum spcp_request_state {
     request_cmd,
     request_nargs,
-    request_narg,
+    request_arg_size,
     request_arg,
 
     request_done,
@@ -69,8 +70,8 @@ enum spcp_request_cmd {
 
 struct spcp_request {
     enum spcp_request_cmd cmd;
+    uint8_t *arg0;
     uint8_t *arg1;
-    uint8_t *arg2;
 };
 
 struct spcp_request_parser {
@@ -81,11 +82,14 @@ struct spcp_request_parser {
     /** argumentos ya leidos */
     uint8_t nargs_i;
     /** ultimo narg parseado */
-    uint8_t narg;
+    uint8_t arg_size;
     /** bytes del argumento ya leidos*/
-    uint8_t narg_i;
+    uint8_t arg_size_i;
 
 
 };
+
+extern enum spcp_request_state
+spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored);
 
 #endif
