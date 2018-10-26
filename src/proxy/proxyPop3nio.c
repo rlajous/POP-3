@@ -821,9 +821,15 @@ response_init(const unsigned state, struct selector_key *key) {
 }
 
 static void
-write_user(struct selector_key *key, char *username){
+write_user(struct selector_key *key, char *username, size_t length){
     struct pop3 *pop3 = ATTACHMENT(key);
-    pop3->username = username;
+    if(pop3->username == NULL) {
+        pop3->username = malloc(length+1);
+    } else {
+        pop3->username = realloc(pop3->username, length+1);
+    }
+    memcpy(pop3->username, username, length);
+    pop3->username[length+1] = '\0';
 }
 
 static void
@@ -849,6 +855,8 @@ response_read(struct selector_key *key){
     struct request_queue *q = d->request_queue;
     struct request *request;
     unsigned ret = RESPONSE;
+    bool locked_usr = ATTACHMENT(key)->verified_username;
+
 
     ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
@@ -860,10 +868,8 @@ response_read(struct selector_key *key){
             }
             int st = response_consume(rb, wb, p, 0);
             if(response_is_done(st, 0)){
-                if(p->request->cmd == user && p->pop3_response_success == true){
-                    char *username = malloc(p->request->argsize[0]);
-                    memcpy(username, p->request->arg[0], p->request->argsize[0]);
-                    write_user(key, username);
+                if(p->request->cmd == user && p->pop3_response_success == true && !locked_usr){
+                    write_user(key, p->request->arg[0], p->request->argsize[0]);
                 }
                 if(p->request->cmd == pass && p->pop3_response_success == true){
                     lock_user(key);
