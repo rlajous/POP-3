@@ -7,7 +7,14 @@ add_executable(proxyPop main.c
         proxy/proxyPop3nio.c
         pop3Parsers/pop3request.c
         utils/proxyArguments.c
-        utils/request_queue.c pop3Parsers/pop3response.c pop3Parsers/pop3response.h proxy/ServerSpcpNio.c proxy/ServerSpcpNio.h spcpParsers/spcpRequest.c spcpParsers/spcpRequest.h)
+        utils/request_queue.c
+        pop3Parsers/pop3response.c
+        pop3Parsers/pop3response.h
+        proxy/ServerSpcpNio.c proxy/ServerSpcpNio.h
+        spcpParsers/spcpRequest.c
+        spcpParsers/spcpRequest.h
+        proxy/spcpServerCredentials.c
+        proxy/spcpServerCredentials.h)
 find_package(Threads)
 target_link_libraries(proxyPop ${CMAKE_THREAD_LIBS_INIT})
 
