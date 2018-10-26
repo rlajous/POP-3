@@ -5,7 +5,7 @@
 #ifndef PROJECT_REQUEST_QUEUE_H
 #define PROJECT_REQUEST_QUEUE_H
 
-#include "request.h"
+#include "../pop3Parsers/pop3request.h"
 
 /**
  * A simple queue holding the relevant

@@ -11,9 +11,9 @@
 #include "../utils/stm.h"
 #include "../utils/selector.h"
 #include "../utils/proxyArguments.h"
-#include "../utils/request.h"
+#include "../pop3Parsers/pop3request.h"
 #include "../utils/request_queue.h"
-#include "../utils/response.h"
+#include "../pop3Parsers/pop3response.h"
 #include "../utils/metrics.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))

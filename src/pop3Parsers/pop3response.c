@@ -4,8 +4,8 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "response.h"
-#include "request.h"
+#include "pop3response.h"
+#include "pop3request.h"
 
 
 enum response_state

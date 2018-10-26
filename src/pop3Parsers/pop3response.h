@@ -2,8 +2,8 @@
 #define PROJECT_RESPONSE_H
 
 #include <stdint.h>
-#include "buffer.h"
-#include "request.h"
+#include "../utils/buffer.h"
+#include "pop3request.h"
 
 enum response_state {
     response_detect_status,

@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#include "buffer.h"
-#include "request_queue.h"
+#include "../utils/buffer.h"
+#include "../utils/request_queue.h"
 
 #define MAX_CMD_LENGTH 4
 #define MAX_ARG_LENGTH 40

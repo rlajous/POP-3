@@ -2,8 +2,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
-#include "request.h"
-#include "buffer.h"
+#include "pop3request.h"
+#include "../utils/buffer.h"
 
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
