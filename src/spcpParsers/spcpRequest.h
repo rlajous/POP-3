@@ -72,6 +72,8 @@ struct spcp_request {
     enum spcp_request_cmd cmd;
     uint8_t *arg0;
     uint8_t *arg1;
+    size_t arg0_size;
+    size_t arg1_size;
 };
 
 struct spcp_request_parser {
@@ -91,5 +93,8 @@ struct spcp_request_parser {
 
 extern enum spcp_request_state
 spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored);
+
+extern void
+spcp_request_parser_init(struct spcp_request_parser *p);
 
 #endif

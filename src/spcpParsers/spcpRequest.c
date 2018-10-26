@@ -35,7 +35,7 @@ arg_is_done(struct spcp_request_parser *p) {
 }
 
 extern void
-spcp_request_parser_init(struct spcp_request_parser *p){
+spcp_request_parser_init(struct spcp_request_parser *p) {
     p->state = request_cmd;
     memset(p->request, 0, sizeof(*(p->request)));
 }
@@ -61,10 +61,12 @@ parse_request_arg_size(struct spcp_request_parser *p, const uint8_t c) {
     arg_size_set(p, c);
     if(p->nargs_i == 0) {
         p->request->arg0 = malloc(c);
+        p->request->arg0_size = c;
     } else if( p->nargs_i == 1) {
         p->request->arg1 = malloc(c);
+        p->request->arg1_size = c;
     }
-    return request_arg_size;
+    return request_arg;
 }
 
 static enum spcp_request_state

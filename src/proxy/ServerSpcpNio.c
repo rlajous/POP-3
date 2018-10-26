@@ -44,7 +44,7 @@ struct spcp {
     struct state_machine          stm;
 
     /** Parser */
-    struct request request;
+    struct spcp_request request;
     struct spcp_request_parser parser;
     /** El resumen de la respuesta a enviar */
     enum spcp_response_status status;
@@ -206,6 +206,55 @@ spcp_passive_accept(struct selector_key *key) {
 /////////////////////////////////////////////////////////////////////////////////
 
 
+static void
+user_read_init(const unsigned state, struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    spcp_request_parser_init(&spcp->parser);
+}
+
+static unsigned
+user_process(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    struct spcp_request *request = &spcp->request;
+    if(spcp->username == NULL)
+        spcp->username = malloc(spcp->request.arg0_size + 1);
+    else
+        spcp->username = realloc(spcp->username, spcp->request.arg0_size +1);
+
+    memcpy(spcp->username, spcp->request.arg0, spcp->request.arg0_size);
+    spcp->username[spcp->request.arg0_size + 1] = '\0';
+
+}
+
+/** lee todos los bytes del mensaje de tipo `request' y inicia su proceso */
+static unsigned
+user_read(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    buffer *b     = &spcp->read_buffer;
+    unsigned  ret   = USER_READ;
+    bool  error = false;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(b, &count);
+    n = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        buffer_write_adv(b, n);
+        int st = spcp_request_consume(b, &spcp->parser, &error);
+        if(request_is_done(st, 0)) {
+            ret = user_process(key);
+        }
+    } else {
+        ret = ERROR;
+    }
+
+    return error ? ERROR : ret;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -213,6 +262,8 @@ spcp_passive_accept(struct selector_key *key) {
 static const struct state_definition client_statbl[] = {
         {
                 .state            = USER_READ,
+                .on_arrival       = user_read_init,
+                .on_read_ready    = user_read,
         },{
                 .state            = USER_WRITE,
         },{
