@@ -97,4 +97,10 @@ spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored);
 extern void
 spcp_request_parser_init(struct spcp_request_parser *p);
 
+extern int
+spcp_no_data_request_marshall(buffer *b, uint8_t status);
+
+extern int
+spcp_data_request_marshall(buffer *b, uint8_t status, char *data);
+
 #endif

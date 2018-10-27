@@ -155,7 +155,20 @@ spcp_cmd_resolve(struct spcp_request *request) {
 }
 
 extern int
-spcp_request_marshall(buffer *b, char *data){
+spcp_data_request_marshall(buffer *b, uint8_t status, char *data){
     return -1;
 }
+
+extern int
+spcp_no_data_request_marshall(buffer *b, uint8_t status){
+    size_t n;
+    uint8_t *buff = buffer_write_ptr(b, &n);
+    if(n < 1){
+        return -1;
+    }
+    buff[0] = status;
+    buffer_write_adv(b, 1);
+    return 1;
+}
+
 

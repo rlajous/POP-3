@@ -18,6 +18,7 @@
 #include "../utils/request_queue.h"
 #include "../utils/metrics.h"
 #include "../spcpParsers/spcpRequest.h"
+#include "spcpServerCredentials.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -201,31 +202,47 @@ spcp_passive_accept(struct selector_key *key) {
     spcp_destroy_(state);
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-///                                 USER_READ                                 ///
-/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+///                                   USER                                   ///
+////////////////////////////////////////////////////////////////////////////////
 
 
 static void
 user_read_init(const unsigned state, struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
-
     spcp_request_parser_init(&spcp->parser);
 }
 
 static unsigned
 user_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
+    unsigned ret = USER_WRITE;
 
     struct spcp_request *request = &spcp->request;
     if(spcp->username == NULL)
         spcp->username = malloc(spcp->request.arg0_size + 1);
     else
         spcp->username = realloc(spcp->username, spcp->request.arg0_size +1);
+    if(spcp->username == NULL){
+        spcp->status = err;
+        //TODO: che facciamo?
+    }
 
     memcpy(spcp->username, spcp->request.arg0, spcp->request.arg0_size);
     spcp->username[spcp->request.arg0_size + 1] = '\0';
 
+    if(user_present(spcp->username)) {
+        if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
+            spcp->status = success;
+            ret = ERROR;
+        }
+    } else {
+        if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x01)) {
+            spcp->status = auth_err;
+            ret = ERROR;
+        }
+    }
+    return ret;
 }
 
 /** lee todos los bytes del mensaje de tipo `request' y inicia su proceso */
@@ -255,8 +272,94 @@ user_read(struct selector_key *key) {
     return error ? ERROR : ret;
 }
 
+static unsigned
+user_write(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
 
-/////////////////////////////////////////////////////////////////////////////////
+    unsigned  ret     = USER_WRITE;
+    struct buffer *wb = &spcp->write_buffer;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_read_ptr(wb, &count);
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(wb, n);
+        if(!buffer_can_read(wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = REQUEST_READ;
+            } else {
+                ret = ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+////////////////////////////////////////////////////////////////////////////////
+///                                   PASS                                   ///
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+pass_read_init(const unsigned state, struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+    spcp_request_parser_init(&spcp->parser);
+}
+
+
+static unsigned
+pass_process(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+    unsigned ret = PASS_WRITE;
+
+    char pass[spcp->request.arg0_size + 1];
+    memcpy(pass, spcp->request.arg0, spcp->request.arg0_size);
+    pass[spcp->request.arg0_size + 1] = '\0';
+
+    if(validate_user(spcp->username, pass)) {
+        if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
+            spcp->status = success;
+            ret = ERROR;
+        }
+    } else {
+        if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x01)) {
+            spcp->status = auth_err;
+            ret = ERROR;
+        }
+    }
+    return ret;
+}
+
+static unsigned
+pass_read() {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    buffer *b     = &spcp->read_buffer;
+    unsigned  ret   = USER_READ;
+    bool  error = false;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(b, &count);
+    n = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        buffer_write_adv(b, n);
+        int st = spcp_request_consume(b, &spcp->parser, &error);
+        if(request_is_done(st, 0)) {
+            ret = pass_process(key);
+        }
+    } else {
+        ret = ERROR;
+    }
+
+    return error ? ERROR : ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 /** definición de handlers para cada estado */
 static const struct state_definition client_statbl[] = {
@@ -266,10 +369,14 @@ static const struct state_definition client_statbl[] = {
                 .on_read_ready    = user_read,
         },{
                 .state            = USER_WRITE,
+                .on_write_ready   = user_write,
         },{
                 .state            = PASS_READ,
+                .on_arrival       = pass_read_init,
+                .on_read_ready    = pass_read,
         },{
                 .state            = PASS_WRITE,
+                .on_write_ready   = user_write,
         },{
                 .state            = REQUEST_READ,
         },{

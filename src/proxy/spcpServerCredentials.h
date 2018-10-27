@@ -22,4 +22,6 @@ static const struct user_info USERS[] = {
 extern bool
 validate_user(char *username, char *password);
 
+extern bool
+user_present(char *username);
 #endif
