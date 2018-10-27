@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "common.h"
-
-//TODO: Chekear si se pueden evitar algunos includes, ojo con funciones sctp.
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
