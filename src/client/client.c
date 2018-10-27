@@ -94,7 +94,7 @@ int main(int argc, char * argv[]) {
     exit(0);
   }
 
-  printf(" WELCOME TO J2M2 PROTOCOL CLIENT \n");
+  printf("SPCP PROTOCOL CLIENT STARTED\n");
   printf("        Please login        \n");
   // Start J2M2 Logic
 

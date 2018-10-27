@@ -27,7 +27,7 @@ int handleLogin(uint8_t * second, uint8_t * third, int connSock){
   struct sctp_status status;
   
   if(!second[0] || !third[0]){
-    printf(ECOLOR EPREFIX " Invalid parameters. " ESUFIX RESETCOLOR"\n");
+    printf(" Invalid parameters. \n");
     return 0;
   } 
 
@@ -42,11 +42,11 @@ int handleLogin(uint8_t * second, uint8_t * third, int connSock){
   //  datagram[4 + secondLenght + thirdLenght + 1] = "\0";
   // Send login request
 
-  printf(ICOLOR IPREFIX " ...Sending login... ");
+  printf(" ...Sending login... ");
   ret = sctp_sendmsg( connSock, (const void *)datagram, datagramSize,
                          NULL, 0, 0, 0, STREAM, 0, 0 ); 
 
-  printf("OK!" ISUFIX RESETCOLOR"\n");
+  printf("OK!\n");
 
   /* Read and emit the status of the Socket (optional step) */
   in = sizeof(status);
@@ -61,7 +61,7 @@ int handleLogin(uint8_t * second, uint8_t * third, int connSock){
 
   if(resp[3] == 1){
     //Login accepted
-    printf(SCOLOR SPREFIX " Welcome! " SSUFIX RESETCOLOR"\n");
+    printf(" Welcome! \n");
     return 1;
   }
   return 0;
@@ -72,7 +72,7 @@ int handleMetric(char * second, char * third, int connSock){
   uint8_t datagram[MAX_DATAGRAM];
   
   if (third[0]){
-    printf(ECOLOR EPREFIX " Invalid parameters. " ESUFIX RESETCOLOR"\n");
+    printf(" Invalid parameters. \n");
     return 0;
   }
   if (!second[0]){
@@ -88,7 +88,7 @@ int handleMetric(char * second, char * third, int connSock){
     }else if(strcmp(second, "connsucc") == 0){
       command = 3;
     }else{
-      printf(ECOLOR EPREFIX " Invalid metric. " ESUFIX RESETCOLOR"\n");
+      printf(" Invalid metric. \n");
       return 0;
     }
   }
@@ -119,7 +119,7 @@ int handleConfig(char * second, char * third, int connSock){
     command = COMM;
     argsq = 1;
   } else{
-    printf(ECOLOR EPREFIX " Invalid Config. " ESUFIX RESETCOLOR"\n");
+    printf(" Invalid Config. \n");
     return 0;
   }    
   
@@ -142,7 +142,7 @@ int handleConfig(char * second, char * third, int connSock){
 }
 
 int handleHelp(){
-  printf("\nWe are here to help you!\n");
+  printf("\nThese are the following commands: \n");
   
   printf("        [Access]        \n\n");
   printf("login  [username][password].\n\n");
@@ -172,7 +172,7 @@ int handleExit(char * second, char * third, int connSock){
   uint8_t datagram[MAX_DATAGRAM];
  
   if(second[0]){
-    printf(ECOLOR EPREFIX " Parameters not allowed. " ESUFIX RESETCOLOR"\n");
+    printf(" Parameters not allowed. \n");
     return 0;
   }  
 
