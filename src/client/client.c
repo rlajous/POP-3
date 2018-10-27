@@ -80,14 +80,6 @@ int main(int argc, char * argv[]) {
     exit();    
   }
 
-  /* Specify that a maximum of 5 streams will be available per socket */
-  memset(&initmsg, 0, sizeof(initmsg));
-  initmsg.sinit_num_ostreams = 5;
-  initmsg.sinit_max_instreams = 5;
-  initmsg.sinit_max_attempts = 4;
-  ret = setsockopt(connSock, IPPROTO_SCTP, SCTP_INITMSG,
-                   &initmsg, sizeof(initmsg));
-
   /* Specify the peer endpoint to which we'll connect */
   bzero((void *) &servaddr, sizeof(servaddr));
   servaddr.sin_family = AF_INET;
@@ -101,16 +93,6 @@ int main(int argc, char * argv[]) {
     printf(" Can't connect. Check if the server is working property.\n");
     exit(0);
   }
-  /* Enable receipt of SCTP Snd/Rcv Data via sctp_recvmsg */
-  memset((void *) &events, 0, sizeof(events));
-  events.sctp_data_io_event = 1;
-  ret = setsockopt(connSock, SOL_SCTP, SCTP_EVENTS,
-                   (const void *) &events, sizeof(events));
-
-  /* Read and emit the status of the Socket (optional step) */
-  in = sizeof(status);
-  ret = getsockopt(connSock, SOL_SCTP, SCTP_STATUS,
-                   (void *) &status, (socklen_t * ) & in);
 
   printf(" WELCOME TO J2M2 PROTOCOL CLIENT \n");
   printf("        Please login        \n");
