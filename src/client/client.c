@@ -76,6 +76,10 @@ int main(int argc, char * argv[]) {
   /* Create an SCTP TCP-Style Socket */
   connSock = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 
+  if (connSock==-1){
+    exit();    
+  }
+
   /* Specify that a maximum of 5 streams will be available per socket */
   memset(&initmsg, 0, sizeof(initmsg));
   initmsg.sinit_num_ostreams = 5;
