@@ -14,6 +14,8 @@
 #include "../pop3Parsers/pop3request.h"
 #include "../utils/request_queue.h"
 #include "../pop3Parsers/pop3response.h"
+#include "../utils/parser.h"
+#include "../utils/parser_utils.h"
 #include "../utils/metrics.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
@@ -45,6 +47,9 @@ struct capa_st {
     size_t  remaining;
     char    *current;
     buffer  *wb;
+    struct parser_definition pipelineDef;
+    struct response_parser  response;
+    struct parser *pipeline;
 };
 
 struct request_st {
@@ -482,18 +487,63 @@ connecting(struct selector_key *key) {
     s |= selector_set_interest_key(key, OP_READ);
     return SELECTOR_SUCCESS == s ? HELLO : ERROR;
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 /// CAPA
 ////////////////////////////////////////////////////////////////////////////////
+
+static unsigned
+capa_read_process(struct selector_key *key, uint8_t read) {
+    struct pop3     *p =  ATTACHMENT(key);
+    struct capa_st  *d = &p->origin.capa;
+    unsigned  ret      = CAPA;
+    enum response_state st;
+    const struct parser_event * event;
+
+    st   = response_parser_feed(&d->response, read);
+
+    if(p->pipeliner != true && d->response.pop3_response_success == true) {
+        event = parser_feed(d->pipeline, read);
+        if(event->type == STRING_CMP_EQ) {
+            p->pipeliner = true;
+        }
+
+        if(st == response_new_line) {
+            parser_reset(d->pipeline);
+        }
+    }
+
+    if(response_is_done(st, 0)) {
+        response_close(&d->response);
+        parser_destroy(d->pipeline);
+
+        selector_status s = SELECTOR_SUCCESS;
+        s |= selector_set_interest_key(key, OP_NOOP);
+        s |= selector_set_interest    (key->s, p->client_fd, OP_READ);
+        ret = SELECTOR_SUCCESS == s ? REQUEST : ERROR;
+    }
+
+    return ret;
+}
 
 static void
 capa_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
     struct capa_st  *d = &p->origin.capa;
+    struct parser_definition def = parser_utils_strcmpi("pipelining");
     memcpy(d->message, "CAPA\r\n", CAPA_CMD);
-    d->remaining = CAPA_CMD;
-    d->current   = d->message;
-    d->wb        = &(p->write_buffer);
+    d->remaining   = CAPA_CMD;
+    d->current     = d->message;
+    d->wb          = &(p->write_buffer);
+    memcpy(&d->pipelineDef, &def, sizeof(def));
+    d->pipeline    = parser_init(parser_no_classes(), &d->pipelineDef);
+
+    struct request *capa_req = malloc(sizeof(struct request));
+    capa_req->cmd   = capa;
+    capa_req->multi = true;
+    capa_req->nargs = 0;
+
+    response_parser_init(&d->response, capa_req);
 }
 
 static unsigned
@@ -502,6 +552,7 @@ capa_read(struct selector_key *key) {
     struct capa_st  *d = &p->origin.capa;
     unsigned  ret      = CAPA;
     uint8_t *ptr;
+    uint8_t read;
     size_t  count;
     ssize_t  n;
 
@@ -509,8 +560,10 @@ capa_read(struct selector_key *key) {
     n   = recv(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(d->wb, n);
-        
-        //TODO: RESPONSE PARSING
+        while(buffer_can_read(d->wb)) {
+            read = buffer_read(d->wb);
+            ret = capa_read_process(key, read);
+        }
     } else {
         ret = ERROR;
     }
@@ -637,11 +690,11 @@ hello_write(struct selector_key *key) {
     } else {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb)) {
-            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
-                ret = REQUEST;
-            } else {
-                ret = ERROR;
-            }
+            selector_status s = SELECTOR_SUCCESS;
+            s |= selector_set_interest_key(key, OP_NOOP);
+            s |= selector_set_interest    (key->s, p->origin_fd, OP_WRITE);
+
+            ret = SELECTOR_SUCCESS == s ? CAPA : ERROR;
         }
     }
 
