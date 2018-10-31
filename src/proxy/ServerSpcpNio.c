@@ -259,7 +259,7 @@ user_read(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = sctp_recvmsg(key->fd, ptr, count, 0);
+    n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -284,7 +284,7 @@ user_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    n = sctp_sendmsg(key->fd, ptr, count, MSG_NOSIGNAL);
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
         ret = ERROR;
     } else {
@@ -353,7 +353,7 @@ pass_read() {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = sctp_recvmsg(key->fd, ptr, count, 0);
+    n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -379,7 +379,7 @@ pass_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    n = sctp_sendmsg(key->fd, ptr, count, MSG_NOSIGNAL);
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
         ret = ERROR;
     } else {
