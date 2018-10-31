@@ -33,8 +33,21 @@ enum pop3_state {
     TRANSFORM,
     APPEND_CAPA,
     DONE,
+    HANDLEABLE_ERROR,
     ERROR,
 };
+
+typedef enum {
+    CONNECTION_REFUSED = 0,
+    DISCONNECTED,
+    INTERNAL,
+} handeleable_errors;
+
+static char * error_messages[] = {
+          "-ERR CONNECTION REFUSED\r\n",
+          "-ERR DISCONNECTED\r\n",
+          "-ERR PROXY ERROR\r\n"
+        };
 
 struct hello_st {
     buffer                  *wb, *rb;
@@ -52,6 +65,13 @@ struct capa_st {
     struct parser_definition pipelineDef;
     struct response_parser  response;
     struct parser *pipeline;
+};
+
+struct error_st {
+    char    *message;
+    size_t  remaining;
+    buffer  *wb;
+    handeleable_errors error;
 };
 
 struct request_st {
@@ -102,6 +122,7 @@ struct pop3 {
         struct hello_st     hello;
         struct request_st   request;
         struct response_st  response;
+        struct error_st     error;
     } client;
     /** estados para el origin_fd */
     union {
@@ -356,8 +377,8 @@ resolve_address_done(struct selector_key *key) {
     unsigned           ret;
 
     if(0 == p->origin_resolution) {
-        //TODO: SEND ERROR
-        return ERROR;
+        p->client.error.error = CONNECTION_REFUSED;
+        return HANDLEABLE_ERROR;
     } else {
         p->origin_domain   = p->origin_resolution->ai_family;
         p->origin_addr_len = p->origin_resolution->ai_addrlen;
@@ -446,8 +467,8 @@ resolve_connect(struct selector_key *key) {
             close(sock);
         }
     }
-    //TODO: SEND CONNECTION ERROR
-    return ERROR;
+    p->client.error.error = CONNECTION_REFUSED;
+    return HANDLEABLE_ERROR;
 }
 
 static unsigned
@@ -458,8 +479,8 @@ connecting(struct selector_key *key) {
     unsigned ret;
 
     if (getsockopt(key->fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-        //TODO: ERROR
-        return ERROR;
+        p->client.error.error = CONNECTION_REFUSED;
+        return HANDLEABLE_ERROR;
     } else {
         if (error == 0) {
             p->origin_fd = key->fd;
@@ -478,8 +499,8 @@ connecting(struct selector_key *key) {
                 }
                 return ret;
             }
-            //TODO: SEND ERROR MESSAGE
-            return ERROR;
+            p->client.error.error = CONNECTION_REFUSED;
+            return HANDLEABLE_ERROR;
         }
     }
 
@@ -598,8 +619,8 @@ capa_write(struct selector_key *key) {
         buffer_read_adv(d->wb, n);
         if(!buffer_can_read(d->wb) && d->remaining == 0) {
             if( SELECTOR_SUCCESS != selector_set_interest_key(key, OP_READ)) {
-                //TODO: SEND ERROR MESSAGE
-                ret = ERROR;
+                p->client.error.error = INTERNAL;
+                return HANDLEABLE_ERROR;
             }
         }
     } else {
@@ -1031,6 +1052,52 @@ response_write(struct selector_key *key){
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// HANDLEABLE_ERROR
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+error_init(const unsigned state, struct selector_key *key) {
+  struct pop3      *p =  ATTACHMENT(key);
+  struct error_st  *d = &p->client.error;
+
+  d->message     = error_messages[d->error];
+  d->remaining   = strlen(d->message);
+  d->wb          = &(p->write_buffer);
+  selector_set_interest(key->s, p->client_fd, OP_WRITE);
+}
+
+static unsigned
+error_write(struct selector_key *key) {
+  struct pop3     *p  =  ATTACHMENT(key);
+  struct error_st *d  = &p->client.error;
+  unsigned        ret = HANDLEABLE_ERROR;
+
+  uint8_t *ptr;
+  size_t  count;
+  ssize_t  n;
+
+  if(d->remaining > 0) {
+    ptr = buffer_write_ptr(d->wb, &count);
+    count = count >= d->remaining ? d->remaining : count;
+    memcpy(ptr, d->message, count);
+    buffer_write_adv(d->wb, count);
+    d->remaining -= count;
+    d->message   += count;
+  }
+
+  ptr = buffer_read_ptr(d->wb, &count);
+  n   = send(key->fd, ptr, count, MSG_NOSIGNAL);
+  if(n > 0) {
+    buffer_read_adv(d->wb, n);
+    if (!buffer_can_read(d->wb) && d->remaining == 0) {
+      ret = ERROR;
+    }
+  }
+
+  return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
@@ -1067,9 +1134,13 @@ static const struct state_definition proxy_states[] = {
         },{
                 .state            = APPEND_CAPA,
         },{
-                .state            = DONE
+                .state            = DONE,
         },{
-                .state            = ERROR
+                .state            = HANDLEABLE_ERROR,
+                .on_arrival       = error_init,
+                .on_write_ready   = error_write,
+        },{
+                .state            = ERROR,
         }
 };
 
