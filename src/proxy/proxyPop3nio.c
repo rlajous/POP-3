@@ -37,7 +37,9 @@ enum pop3_state {
 };
 
 struct hello_st {
-    buffer              *wb;
+    buffer                  *wb, *rb;
+    struct response_parser  response;
+    bool                    done;
 };
 
 #define CAPA_CMD 6
@@ -539,7 +541,7 @@ capa_init(const unsigned state, struct selector_key *key) {
     d->pipeline    = parser_init(parser_no_classes(), &d->pipelineDef);
 
     struct request *capa_req = malloc(sizeof(struct request));
-    capa_req->cmd   = capa;
+    capa_req->cmd   = unknown;
     capa_req->multi = true;
     capa_req->nargs = 0;
 
@@ -616,7 +618,7 @@ compute_write_interests(fd_selector s, buffer * b, fd_interest duplex, int fd) {
         ret |= OP_WRITE;
     }
     if(SELECTOR_SUCCESS != selector_set_interest(s, fd, ret)) {
-        abort();
+        ret = OP_NOOP;
     }
     return ret;
 }
@@ -628,7 +630,7 @@ compute_read_interests(fd_selector s, buffer * b, fd_interest duplex, int fd) {
         ret |= OP_READ;
     }
     if(SELECTOR_SUCCESS != selector_set_interest(s, fd, ret)) {
-        abort();
+        ret = OP_NOOP;
     }
     return ret;
 }
@@ -638,12 +640,33 @@ compute_read_interests(fd_selector s, buffer * b, fd_interest duplex, int fd) {
 // HELLO
 ////////////////////////////////////////////////////////////////////////////////
 
+static unsigned
+hello_interests(struct selector_key *key) {
+  unsigned ret = HELLO;
+  struct pop3     *p =  ATTACHMENT(key);
+  struct hello_st *d = &p->client.hello;
+
+  fd_interest origin = compute_read_interests(key->s, d->rb, OP_READ, p->origin_fd);
+  fd_interest client = compute_write_interests(key->s, d->wb, OP_WRITE, p->client_fd);
+
+  return ret;
+}
+
 static void
 hello_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
     struct hello_st *d = &p->client.hello;
 
     d->wb              = &(p->write_buffer);
+    d->rb              = &(p->read_buffer);
+    d->done            = false;
+
+  struct request *hello = malloc(sizeof(struct request));
+  hello->cmd   = unknown;
+  hello->multi = false;
+  hello->nargs = 0;
+
+  response_parser_init(&d->response, hello);
 }
 
 static unsigned
@@ -651,21 +674,28 @@ hello_read(struct selector_key *key) {
     struct pop3 *p     =  ATTACHMENT(key);
     struct hello_st *d = &p->client.hello;
     unsigned  ret      = HELLO;
+    buffer *rb         = d->rb;
+    buffer *wb         = d->wb;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    ptr = buffer_write_ptr(d->wb, &count);
+    ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-        buffer_write_adv(d->wb, n);
-        //TODO: We should parse response
-        selector_status s = SELECTOR_SUCCESS;
-        s |= selector_set_interest_key(key, OP_NOOP);
-        s |= selector_set_interest    (key->s, p->client_fd, OP_WRITE);
-        if(SELECTOR_SUCCESS != s) {
-            ret = ERROR;
+      enum response_state st;
+      buffer_write_adv(rb, n);
+      while(buffer_can_read(rb)) {
+        if(!buffer_can_write(wb)){
+          break;
         }
+        st = response_consume(rb, wb, &d->response, 0);
+        if(response_is_done(st, 0)){
+          response_close(&d->response);
+          d->done = true;
+        }
+      }
+      ret = hello_interests(key);
     } else {
         ret = ERROR;
     }
@@ -689,7 +719,7 @@ hello_write(struct selector_key *key) {
         ret = ERROR;
     } else {
         buffer_read_adv(d->wb, n);
-        if(!buffer_can_read(d->wb)) {
+        if(!buffer_can_read(d->wb) && d->done) {
             selector_status s = SELECTOR_SUCCESS;
             s |= selector_set_interest_key(key, OP_NOOP);
             s |= selector_set_interest    (key->s, p->origin_fd, OP_WRITE);
@@ -882,7 +912,7 @@ write_user(struct selector_key *key, char *username, size_t length){
         pop3->username = realloc(pop3->username, length+1);
     }
     memcpy(pop3->username, username, length);
-    pop3->username[length+1] = '\0';
+    pop3->username[length] = '\0';
 }
 
 static void
@@ -892,7 +922,7 @@ lock_user(struct selector_key *key){
 }
 
 static unsigned
-response_process(struct response_st *d, struct selector_key *key);
+response_interests(struct response_st *d, struct selector_key *key);
 
 static unsigned
 response_read(struct selector_key *key){
@@ -931,13 +961,13 @@ response_read(struct selector_key *key){
                 if(!queue_is_empty(d->request_queue)) {
                     request = pop_request(d->request_queue);
                     response_parser_init(p, request);
-                    ret = response_process(d, key);
+                    ret = response_interests(d, key);
                 }
             } else {
                 ret = RESPONSE;
             }
         }
-        ret = response_process(d, key);
+        ret = response_interests(d, key);
     //TODO: Checkear temas de shutdown
     } else {
         shutdown(*d->fd, SHUT_RD);
@@ -952,7 +982,7 @@ response_read(struct selector_key *key){
 }
 
 static unsigned
-response_process(struct response_st *d, struct selector_key *key) {
+response_interests(struct response_st *d, struct selector_key *key) {
     unsigned ret;
     struct response_st *other  = d->other;
 
@@ -975,7 +1005,7 @@ response_write(struct selector_key *key){
     struct response_st *other  = d->other;
 
 
-    unsigned ret    = REQUEST;
+    unsigned ret    = RESPONSE;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
@@ -989,7 +1019,8 @@ response_write(struct selector_key *key){
     } else {
         buffer_read_adv(d->wb, n);
 
-        if(!buffer_can_read(d->wb)) {
+        if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb)
+           && queue_is_empty(d->request_queue) && response_is_done(other->parser.response_state, 0)) {
             compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
             compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
             ret = REQUEST;
@@ -1085,7 +1116,11 @@ pop3_block(struct selector_key *key) {
 
 static void
 pop3_close(struct selector_key *key) {
-    pop3_destroy(ATTACHMENT(key));
+    struct pop3 *pop3 = ATTACHMENT(key);
+    pop3_destroy(pop3);
+    if(pop3->client_fd == key->fd) {
+      proxy_metrics->concurrent_connections--;
+    }
 }
 
 static void
