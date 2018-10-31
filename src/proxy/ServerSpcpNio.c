@@ -435,7 +435,18 @@ get_concurrent_connections(struct buffer *b) {
 
 static unsigned
 get_transfered_bytes(struct buffer *b) {
-    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->bytes)) {
+    unsigned long long data = proxy_metrics->bytes;
+
+    int digits = 0;
+    while(data != 0) {
+        data /= 10;
+        ++digits;
+    }
+    /// Add one for the null termination
+    char serialized_data[digits + 1];
+    sprintf(serialized_data, "%llu", data);
+
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
     return REQUEST_WRITE;
@@ -443,7 +454,18 @@ get_transfered_bytes(struct buffer *b) {
 
 static unsigned
 get_historical_accesses(struct buffer *b) {
-    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->historic_connections)) {
+    unsigned long data = proxy_metrics->historic_connections;
+
+    int digits = 0;
+    while(data != 0) {
+        data /= 10;
+        ++digits;
+    }
+    /// Add one for the null termination
+    char serialized_data[digits + 1];
+    sprintf(serialized_data, "%lu", data);
+
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
     return REQUEST_WRITE;
