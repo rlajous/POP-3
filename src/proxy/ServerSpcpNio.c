@@ -1,7 +1,3 @@
-//
-// Created by francisco on 25/10/18.
-//
-
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <stdint.h>
@@ -10,6 +6,10 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <arpa/inet.h>
+
 
 #include "ServerSpcpNio.h"
 #include "../utils/buffer.h"
@@ -23,6 +23,9 @@
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 extern metrics  *proxy_metrics;
+
+struct sctp_sndrcvinfo sndrcvinfo;
+int sctp_flags;
 
 enum spcp_state {
     USER_READ,
@@ -259,7 +262,7 @@ user_read(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = recv(key->fd, ptr, count, 0);
+    n = sctp_recvmsg(key->fd, ptr, count, (struct sockaddr *) NULL, 0, &sndrcvinfo, &sctp_flags);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -284,7 +287,7 @@ user_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0 );
     if(n == -1) {
         ret = ERROR;
     } else {
@@ -353,7 +356,7 @@ pass_read() {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = recv(key->fd, ptr, count, 0);
+    n = sctp_recvmsg(key->fd, ptr, count, (struct sockaddr *) NULL, 0, &sndrcvinfo, &sctp_flags);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -379,7 +382,7 @@ pass_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0 );
     if(n == -1) {
         ret = ERROR;
     } else {
