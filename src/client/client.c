@@ -99,6 +99,7 @@ int main(int argc, char * argv[]) {
   // Start J2M2 Logic
 
  while(1){
+  printf(" Press 1 to login \n");
   if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
     printf(" No characters read \n");
   }
@@ -107,7 +108,6 @@ int main(int argc, char * argv[]) {
   char second[MAX_BUFFER] = {0};
   char third[MAX_BUFFER] = {0};
   sscanf(buffer, "%s %s %s", first, second, third);
-
   if (strcmp(first, "1") == 0) {
     int flag=1;
     while(flag!=0){
@@ -154,13 +154,13 @@ int main(int argc, char * argv[]) {
             handleActiveTrasnformation();
             break;
           case '5':
-            exit=handleBufferSize();
+            handleBufferSize();
             break;
           case '6':
-            exit=handleTransformationChange();
+            handleTransformationChange();
             break;
           case '7':
-            exit=handleTimeOut();
+            handleTimeOut();
             break;
           case '8':
             exit=handleQuit();
