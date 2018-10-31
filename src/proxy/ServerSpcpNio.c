@@ -414,10 +414,20 @@ spcp_request_init(const unsigned state, struct selector_key *key) {
     spcp_request_parser_init(&spcp->parser);
 }
 
-
 static unsigned
 get_concurrent_connections(struct buffer *b) {
-    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->concurrent_connections)) {
+    unsigned data = proxy_metrics->concurrent_connections;
+
+    int digits = 0;
+    while(data != 0) {
+        data /= 10;
+        ++digits;
+    }
+    /// Add one for the null termination
+    char serialized_data[digits + 1];
+    sprintf(serialized_data, "%d", data);
+
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
         return REQUEST_WRITE;

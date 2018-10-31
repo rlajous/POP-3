@@ -150,7 +150,7 @@ request_validate(struct spcp_request_parser *p) {
 }
 
 extern int
-spcp_data_request_marshall(buffer *b, uint8_t status, uint8_t *data){
+spcp_data_request_marshall(buffer *b, uint8_t status, char *data){
     uint8_t *ptr;
     size_t  count;
 
