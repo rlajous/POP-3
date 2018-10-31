@@ -130,13 +130,13 @@ init_arguments() {
   ret->pop3_address       = init_default_string(POP3);
   ret->pop3_port          = DEFAULT_PROXY_PORT;
 
-  ret->spcp_address     = init_default_string(LOOPBACK);
-  ret->spcp_port        = DEFAULT_CONFIG_PORT;
+  ret->spcp_address       = init_default_string(LOOPBACK);
+  ret->spcp_port          = DEFAULT_CONFIG_PORT;
 
   ret->command            = NULL;
   ret->message            = init_default_string(DEFAULT_REPLACEMENT_MESSAGE);
   ret->filter_error_file  = init_default_string(DEFAULT_ERROR_FILE);
-  //Todo: MediaTypes
+  ret->media_types        = NULL;
 
   ret->version = init_default_string(VERSION);
 
@@ -169,7 +169,7 @@ parse_arguments(const int argc, char * const* argv) {
         messages++;
         break;
       case 'M':
-        //TODO
+        ret->media_types = modify_string(ret->media_types, optarg);
         break;
       case 'o':
         ret->spcp_port = parse_port(optarg);
@@ -232,6 +232,8 @@ destroy_arguments(arguments args) {
       free(args->pop3_address);
     if(NULL != args->command)
       free(args->command);
+    if(NULL != args->media_types)
+      free(args->media_types);
     free(args->spcp_address);
     free(args->message);
     free(args->filter_error_file);

@@ -17,7 +17,7 @@ typedef struct args {
     uint16_t spcp_port;
 
     /** Filters */
-    //TODO: Add MediaTypes
+    char *media_types;
     char *command;
     char *message;
     char *filter_error_file;
