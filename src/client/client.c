@@ -108,80 +108,67 @@ int main(int argc, char * argv[]) {
   char third[MAX_BUFFER] = {0};
   sscanf(buffer, "%s %s %s", first, second, third);
 
-  if (strcmp(first, "login") == 0) {
-    if (handleLogin(second, third, connSock)) {
-      while (1) {
-        first[0]  = 0;
-        second[0] = 0;
-        third[0]  = 0;
-
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-          printf(" No characters read \n");
-          break;
+  if (strcmp(first, "1") == 0) {
+    int flag=1;
+    while(flag!=0){
+      if (fgets(buffer, sizeof(buffer), stdin) != NULL){
+        sscanf(buffer, "%s %s %s", first, second, third);
+        first=handleUser(first);
+      }else{
+        printf(" No characters read \n");
+      }
+    }
+    printf(" Enter Password \n");
+    flag=1;
+    while(flag!=0){
+      if (fgets(buffer, sizeof(buffer), stdin) != NULL){
+        sscanf(buffer, "%s %s %s", first, second, third);
+        first=handlePassword(first);
+        if(first!=0){
         }
-        sscanf(buffer, "%s %s %[\001-\377]", first, second, third);
-        if (strcmp(first, "metric") == 0) {
-          if (!handleMetric(second, third, connSock)) {
-            continue;
+      }else{
+        printf(" No characters read \n");
+      }
+    }
+    helpHandler();
+    int exit=1;
+    while(exit!=0){
+      if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+          printf(" No characters read, for more help enter number 0\n");
+      }else{
+        sscanf(buffer, "%s ", first);
+        switch(first){
+          case '0':
+            handleHelp();
+            break;
+          case '1':
+            handleConcurrentConection();
+            break;
+          case '2':
+            handleTransferedBytes();
+            break;
+          case '3':
+            handleHistoricAcces();
+            break;
+          case '4':
+            handleActiveTrasnformation();
+            break;
+          case '5':
+            exit=handleBufferSize();
+            break;
+          case '6':
+            exit=handleTransformationChange();
+            break;
+          case '7':
+            exit=handleTimeOut();
+            break;
+          case '8':
+            exit=handleQuit();
+            break; 
           }
-        } else if (strcmp(first, "config") == 0) {
-          if (!handleConfig(second, third, connSock)) {
-            continue;
-          }
-        } else if (strcmp(first, "exit") == 0) {
-          if (!handleExit(second, third, connSock)) {
-            continue;
-          }
-        } else if (strcmp(first, "help") == 0) {
-          handleHelp();
-        } else {
-          printf(" Bad Request \n");
-          continue;
-        }
-        // Recieve response
-        flags = 0;
-        uint8_t res[MAX_BUFFER];
-        clean(res);
-        answer aux = calloc(1, sizeof(union ans));
-
-        ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
-                           (struct sockaddr *) NULL, 0, &sndrcvinfo, &flags);
-
-        //Response statuts OK accepted. Dependes on data sent.
-        if (res[TYPE] == 3 && res[COMMAND] == 2) {
-            printf("[  -----   Bye!  -----   ]\n");
-            close(connSock);
-            exit(0);
-        }
-
-        if (res[CODE] == 1) {
-          printf("---Start Message---\n");
-          //if metric trabytes -> uint64_t sent. Else uint8_t.
-          if(res[TYPE] == 1 && res[COMMAND] == 2 && res[ARGSQ] == 1){
-            for(int i = 0; i < ONE_BYTE; i++){
-              aux->arr[i] = res[HEADERS + i];     //Sending 8 bytes to union. 
-            }                                     //After that we will be ready to read the correct number.
-            printf("%llu\n", aux->lng);
-          } else if(res[TYPE] == 2 && res[ARGSQ] == 0){
-              if(res[START_BYTES] == 1){
-                printf("Transformation Activated.\n");
-              } else {
-                printf("Transformation Desactivated.\n");
-              }
-          }else {
-            printf("%u\n", res[START_BYTES]);
-          }
-          printf("---End Message---\n");
-        } else {
-          printf(" Error code %i\n \n", res[CODE]);
         }
       }
-    } else {
-      printf(" Invalid login. \n");
     }
-  } else {
-    printf(" Please login property. \n");
-  }
   }
     close(connSock);
     return 0;
