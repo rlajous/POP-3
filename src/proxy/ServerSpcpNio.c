@@ -22,6 +22,8 @@
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
+extern metrics  *proxy_metrics;
+
 enum spcp_state {
     USER_READ,
     USER_WRITE,
@@ -45,7 +47,6 @@ struct spcp {
     struct state_machine          stm;
 
     /** Parser */
-    struct spcp_request request;
     struct spcp_request_parser parser;
     /** El resumen de la respuesta a enviar */
     enum spcp_response_status status;
@@ -218,27 +219,27 @@ user_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
     unsigned ret = USER_WRITE;
 
-    struct spcp_request *request = &spcp->request;
+    struct spcp_request *request = spcp->parser.request;
     if(spcp->username == NULL)
-        spcp->username = malloc(spcp->request.arg0_size + 1);
+        spcp->username = malloc(spcp->parser.request->arg0_size + 1);
     else
-        spcp->username = realloc(spcp->username, spcp->request.arg0_size +1);
+        spcp->username = realloc(spcp->username, spcp->parser.request->arg0_size +1);
     if(spcp->username == NULL){
-        spcp->status = err;
+        spcp->status = spcp_err;
         //TODO: che facciamo?
     }
 
-    memcpy(spcp->username, spcp->request.arg0, spcp->request.arg0_size);
-    spcp->username[spcp->request.arg0_size + 1] = '\0';
+    memcpy(spcp->username, spcp->parser.request->arg0, spcp->parser.request->arg0_size);
+    spcp->username[spcp->parser.request->arg0_size + 1] = '\0';
 
     if(user_present(spcp->username)) {
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
-            spcp->status = success;
+            spcp->status = spcp_success;
             ret = ERROR;
         }
     } else {
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x01)) {
-            spcp->status = auth_err;
+            spcp->status = spcp_auth_err;
             ret = ERROR;
         }
     }
@@ -258,7 +259,7 @@ user_read(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = recv(key->fd, ptr, count, 0);
+    n = sctp_recvmsg(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -283,14 +284,21 @@ user_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    n = sctp_sendmsg(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
         ret = ERROR;
     } else {
         buffer_read_adv(wb, n);
         if(!buffer_can_read(wb)) {
             if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
-                ret = REQUEST_READ;
+                if(spcp->status == spcp_success){
+                    ret = PASS_READ;
+                }
+                else if(spcp->status == spcp_auth_err){
+                    ret = USER_READ;
+                } else {
+                    ret = ERROR;
+                }
             } else {
                 ret = ERROR;
             }
@@ -315,18 +323,18 @@ pass_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
     unsigned ret = PASS_WRITE;
 
-    char pass[spcp->request.arg0_size + 1];
-    memcpy(pass, spcp->request.arg0, spcp->request.arg0_size);
-    pass[spcp->request.arg0_size + 1] = '\0';
+    char pass[spcp->parser.request->arg0_size + 1];
+    memcpy(pass, spcp->parser.request->arg0, spcp->parser.request->arg0_size);
+    pass[spcp->parser.request->arg0_size + 1] = '\0';
 
     if(validate_user(spcp->username, pass)) {
+        spcp->status = spcp_success;
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
-            spcp->status = success;
             ret = ERROR;
         }
     } else {
+        spcp->status = spcp_auth_err;
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x01)) {
-            spcp->status = auth_err;
             ret = ERROR;
         }
     }
@@ -345,7 +353,7 @@ pass_read() {
     ssize_t  n;
 
     ptr = buffer_write_ptr(b, &count);
-    n = recv(key->fd, ptr, count, 0);
+    n = sctp_recvmsg(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
@@ -359,7 +367,133 @@ pass_read() {
     return error ? ERROR : ret;
 }
 
+
+static unsigned
+pass_write(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    unsigned  ret     = USER_WRITE;
+    struct buffer *wb = &spcp->write_buffer;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_read_ptr(wb, &count);
+    n = sctp_sendmsg(key->fd, ptr, count, MSG_NOSIGNAL);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(wb, n);
+        if(!buffer_can_read(wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                if(spcp->status == spcp_success){
+                    ret = REQUEST_READ;
+                }
+                else if(spcp->status == spcp_auth_err){
+                    ret = PASS_READ;
+                } else {
+                    ret = ERROR;
+                }
+            } else {
+                ret = ERROR;
+            }
+        }
+    }
+
+    return ret;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
+///                                 REQUEST                                  ///
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+spcp_request_init(const unsigned state, struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+    spcp_request_parser_init(&spcp->parser);
+}
+
+
+static unsigned
+get_concurrent_connections(struct buffer *b) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->concurrent_connections)) {
+        return ERROR;
+    }
+        return REQUEST_WRITE;
+}
+
+static unsigned
+get_transfered_bytes(struct buffer *b) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->bytes)) {
+        return ERROR;
+    }
+    return REQUEST_WRITE;
+}
+
+static unsigned
+get_historical_accesses(struct buffer *b) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, (uint8_t *)&proxy_metrics->historic_connections)) {
+        return ERROR;
+    }
+    return REQUEST_WRITE;
+}
+
+static unsigned
+spcp_request_process(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+    struct spcp_request *request = spcp->parser.request;
+    unsigned ret;
+
+    if(request->cmd <= spcp_pass){
+        spcp->status = spcp_invalid_command;
+        if(-1 == spcp_no_data_request_marshall(&spcp->write_buffer, spcp_invalid_command)) {
+            return ERROR;
+        }
+    }
+
+    switch(request->cmd){
+        case spcp_concurrent_connections:
+            ret = get_concurrent_connections(&spcp->write_buffer);
+            break;
+        case spcp_transfered_bytes:
+            ret = get_transfered_bytes(&spcp->write_buffer);
+            break;
+        case spcp_historical_accesses:
+            ret = get_historical_accesses(&spcp->write_buffer);
+            break;
+        case spcp_active_transformation:
+            ret = get_active_transformation(&spcp->write_buffer);
+            break;
+        case spcp_set_buffer_size:
+            ret = set_buffer_size(&spcp->write_buffer, request);
+            break;
+        case spcp_change_transformation:
+            ret = set_transformation(&spcp->write_buffer, request);
+            break;
+        case spcp_quit:
+            ret = do_quit(&spcp->write_buffer);
+        default:
+            ret = ERROR;
+    }
+
+    return ret;
+}
+
+
+static unsigned
+spcp_request_read(struct selector_key *key) {
+
+
+}
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+parser_close(const unsigned state, struct selector_key *key) {
+    struct spcp * spcp = ATTACHMENT(key);
+    spcp_request_close(&spcp->parser);
+}
+
 
 /** definición de handlers para cada estado */
 static const struct state_definition client_statbl[] = {
@@ -367,18 +501,25 @@ static const struct state_definition client_statbl[] = {
                 .state            = USER_READ,
                 .on_arrival       = user_read_init,
                 .on_read_ready    = user_read,
+                .on_departure     = parser_close,
         },{
                 .state            = USER_WRITE,
                 .on_write_ready   = user_write,
+                .on_departure     = parser_close,
         },{
                 .state            = PASS_READ,
                 .on_arrival       = pass_read_init,
                 .on_read_ready    = pass_read,
+                .on_departure     = parser_close,
         },{
                 .state            = PASS_WRITE,
-                .on_write_ready   = user_write,
+                .on_write_ready   = pass_write,
+                .on_departure     = parser_close,
         },{
                 .state            = REQUEST_READ,
+                .on_arrival       = spcp_request_init,
+                .on_read_ready    = spcp_request_read,
+
         },{
                 .state            = REQUEST_WRITE,
         },{
