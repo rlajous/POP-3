@@ -113,7 +113,7 @@ int main(int argc, char * argv[]) {
     while(flag!=0){
       if (fgets(buffer, sizeof(buffer), stdin) != NULL){
         sscanf(buffer, "%s %s %s", first, second, third);
-        first=handleUser(first);
+        flag=handleUser(first);
       }else{
         printf(" No characters read \n");
       }
@@ -123,7 +123,7 @@ int main(int argc, char * argv[]) {
     while(flag!=0){
       if (fgets(buffer, sizeof(buffer), stdin) != NULL){
         sscanf(buffer, "%s %s %s", first, second, third);
-        first=handlePassword(first);
+        flag=handlePassword(first);
         if(first!=0){
         }
       }else{
