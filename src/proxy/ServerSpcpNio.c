@@ -475,6 +475,26 @@ get_historical_accesses(struct buffer *b) {
 }
 
 static unsigned
+get_active_transformation(struct buffer *b) {
+    return REQUEST_WRITE;
+}
+
+static unsigned
+set_buffer_size(struct buffer *b, struct spcp_request *request) {
+    return REQUEST_WRITE;
+}
+
+static unsigned
+set_transformation(struct buffer *b, struct spcp_request *request) {
+    return REQUEST_WRITE;
+}
+
+static unsigned
+do_quit(struct buffer *b) {
+    return REQUEST_WRITE;
+}
+
+static unsigned
 spcp_request_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
     struct spcp_request *request = spcp->parser.request;
