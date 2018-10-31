@@ -13,8 +13,8 @@ typedef struct args {
     uint16_t pop3_port;
 
     /** SCTP configuration address and port */
-    char    *config_address;
-    uint16_t config_port;
+    char    *spcp_address;
+    uint16_t spcp_port;
 
     /** Filters */
     //TODO: Add MediaTypes

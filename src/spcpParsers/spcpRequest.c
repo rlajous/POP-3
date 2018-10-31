@@ -36,7 +36,7 @@ arg_is_done(struct spcp_request_parser *p) {
 
 extern void
 spcp_request_parser_init(struct spcp_request_parser *p) {
-    p->state = request_cmd;
+    p->state = spcp_request_cmd;
     memset(p->request, 0, sizeof(*(p->request)));
 }
 
@@ -45,15 +45,15 @@ static enum spcp_request_state
 parse_request_cmd(struct spcp_request_parser *p, const uint8_t c) {
     if(c <= 0x09){
         p->request->cmd = c;
-        return request_nargs;
+        return spcp_request_nargs;
     }
-    return request_error_invalid_command;
+    return spcp_request_error_invalid_command;
 }
 
 static enum spcp_request_state
 parse_request_nargs(struct spcp_request_parser *p, const uint8_t c) {
     remaining_args_set(p, c);
-    return request_arg_size;
+    return spcp_request_arg_size;
 }
 
 static enum spcp_request_state
@@ -66,7 +66,7 @@ parse_request_arg_size(struct spcp_request_parser *p, const uint8_t c) {
         p->request->arg1 = malloc(c);
         p->request->arg1_size = c;
     }
-    return request_arg;
+    return spcp_request_arg;
 }
 
 static enum spcp_request_state
@@ -86,10 +86,10 @@ parse_request_arg(struct spcp_request_parser *p, const uint8_t c) {
             return request_validate(p);
         } else {
             p->nargs_i++;
-            return request_arg_size;
+            return spcp_request_arg_size;
         }
     }
-    return request_arg;
+    return spcp_request_arg;
 }
 
 extern enum spcp_request_state
@@ -97,26 +97,26 @@ spcp_request_parser_feed(struct spcp_request_parser *p, const uint8_t c){
     enum spcp_request_state next;
 
     switch(p->state){
-        case request_cmd:
+        case spcp_request_cmd:
             next = parse_request_cmd(p, c);
             break;
-        case request_nargs:
+        case spcp_request_nargs:
             next = parse_request_nargs(p, c);
             break;
-        case request_arg_size:
+        case spcp_request_arg_size:
             next = parse_request_arg_size(p, c);
             break;
-        case request_arg:
+        case spcp_request_arg:
             next = parse_request_arg(p, c);
             break;
-        case request_done:
-        case request_error_invalid_command:
-        case request_error_invalid_arguments:
-        case request_error:
+        case spcp_request_done:
+        case spcp_request_error_invalid_command:
+        case spcp_request_error_invalid_arguments:
+        case spcp_request_error:
             next = p->state;
             break;
         default:
-            next = request_error;
+            next = spcp_request_error;
             break;
     }
     return next;
@@ -124,10 +124,10 @@ spcp_request_parser_feed(struct spcp_request_parser *p, const uint8_t c){
 
 extern bool
 spcp_request_is_done(const enum spcp_request_state st, bool *errored) {
-    if (st >= request_error && errored != 0) {
+    if (st >= spcp_request_error && errored != 0) {
         *errored = true;
     }
-    return st >= request_done;
+    return st >= spcp_request_done;
 }
 
 extern enum spcp_request_state
@@ -149,14 +149,21 @@ request_validate(struct spcp_request_parser *p) {
     //TODO: validate the command based on the inputs
 }
 
-enum spcp_response_status
-spcp_cmd_resolve(struct spcp_request *request) {
-
-}
-
 extern int
-spcp_data_request_marshall(buffer *b, uint8_t status, char *data){
-    return -1;
+spcp_data_request_marshall(buffer *b, uint8_t status, uint8_t *data){
+    uint8_t *ptr;
+    size_t  count;
+
+    ptr = buffer_write_ptr(b, &count);
+    if(count < sizeof(data) + 2)
+        return -1;
+
+    buffer_write(b, status);
+    buffer_write(b, sizeof(data));
+    memcpy(ptr, (uint8_t *)&data, sizeof(data));
+    buffer_write_adv(b, sizeof(data));
+
+    return sizeof(data) + 2;
 }
 
 extern int
@@ -171,4 +178,10 @@ spcp_no_data_request_marshall(buffer *b, uint8_t status){
     return 1;
 }
 
-
+extern void
+spcp_request_close(struct spcp_request_parser *p) {
+    if(p->request->arg0 != NULL)
+        free(p->request->arg0);
+    if(p->request->arg1 != NULL)
+        free(p->request->arg1);
+}

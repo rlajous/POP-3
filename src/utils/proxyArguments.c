@@ -130,8 +130,8 @@ init_arguments() {
   ret->pop3_address       = init_default_string(POP3);
   ret->pop3_port          = DEFAULT_PROXY_PORT;
 
-  ret->config_address     = init_default_string(LOOPBACK);
-  ret->config_port        = DEFAULT_CONFIG_PORT;
+  ret->spcp_address     = init_default_string(LOOPBACK);
+  ret->spcp_port        = DEFAULT_CONFIG_PORT;
 
   ret->command            = NULL;
   ret->message            = init_default_string(DEFAULT_REPLACEMENT_MESSAGE);
@@ -162,7 +162,7 @@ parse_arguments(const int argc, char * const* argv) {
         ret->pop3_address = modify_string(ret->pop3_address, optarg);
         break;
       case 'L':
-        ret->config_address = modify_string(ret->config_address, optarg);
+        ret->spcp_address = modify_string(ret->spcp_address, optarg);
         break;
       case 'm':
         add_message(messages, optarg, ret);
@@ -172,7 +172,7 @@ parse_arguments(const int argc, char * const* argv) {
         //TODO
         break;
       case 'o':
-        ret->config_port = parse_port(optarg);
+        ret->spcp_port = parse_port(optarg);
         break;
       case 'p':
         ret->pop3_port = parse_port(optarg);
@@ -232,7 +232,7 @@ destroy_arguments(arguments args) {
       free(args->pop3_address);
     if(NULL != args->command)
       free(args->command);
-    free(args->config_address);
+    free(args->spcp_address);
     free(args->message);
     free(args->filter_error_file);
     free(args->version);
