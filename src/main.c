@@ -13,6 +13,7 @@
 #include "proxy/proxyPop3nio.h"
 #include "utils/proxyArguments.h"
 #include "utils/metrics.h"
+#include "proxy/ServerSpcpNio.h"
 
 static bool done = false;
 arguments proxyArguments;
@@ -59,43 +60,79 @@ main(const int argc, char * const *argv){
     fd_selector selector = NULL;
 
     struct addrinfo *pop3_addr;
-
     if(resolve_address(proxyArguments->pop3_address,
                        proxyArguments->pop3_port, &pop3_addr) == false) {
       err_msg = "unable to resolve address";
       goto finally;
     }
 
-    const int server = socket(pop3_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
-    if(server < 0){
-        err_msg = "unable to create socket";
+    const int pop3_server = socket(pop3_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
+    if(pop3_server < 0){
+        err_msg = "unable to create pop3 proxy socket";
         goto finally;
     }
-    fprintf(stdout, "Listening on TCP port %d\n", proxyArguments->pop3_port);
+    fprintf(stdout, "Pop3 proxy listening on TCP port %d\n", proxyArguments->pop3_port);
 
-    setsockopt(server, SOL_SOCKET,SO_REUSEADDR,&(int){1}, sizeof(int));
+    setsockopt(pop3_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
 
     struct addrinfo *pop3_curr = pop3_addr;
 
     do {
-      if(bind(server, pop3_curr->ai_addr, pop3_curr->ai_addrlen) < 0){
-        err_msg = "Unable to bind socket";
+      if(bind(pop3_server, pop3_curr->ai_addr, pop3_curr->ai_addrlen) < 0){
+        err_msg = "Unable to bind pop3 socket";
         goto finally;
       }
       pop3_curr = pop3_curr->ai_next;
     } while(pop3_curr != NULL);
 
-    if(listen(server, 20) < 0){
-        err_msg = "Unable to listen";
+    if(listen(pop3_server, 20) < 0){
+        err_msg = "Unable to listen at pop3 socket";
         goto finally;
     }
 
     freeaddrinfo(pop3_addr);
 
+
+    /// SPCP
+
+    struct addrinfo *spcp_addr;
+    if(resolve_address(proxyArguments->spcp_address,
+                       proxyArguments->spcp_port, &spcp_addr) == false) {
+        err_msg = "unable to resolve spcp_server address";
+        goto finally;
+    }
+
+    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
+    if(spcp_server < 0){
+        err_msg = "unable to create spcp_server socket";
+        goto finally;
+    }
+    fprintf(stdout, "spcp server listening on SCTP port %d\n", proxyArguments->spcp_port);
+
+    setsockopt(spcp_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
+
+    struct addrinfo *spcp_curr = spcp_addr;
+
+    do {
+        if(bind(spcp_server, spcp_curr->ai_addr, spcp_curr->ai_addrlen) < 0){
+            err_msg = "Unable to bind scpcp socket";
+            goto finally;
+        }
+        spcp_curr = spcp_curr->ai_next;
+    } while(spcp_curr != NULL);
+
+    if(listen(spcp_server, 20) < 0){
+        err_msg = "Unable to listen at spcp socket";
+        goto finally;
+    }
+
+    freeaddrinfo(spcp_addr);
+    ///
+
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT, sigterm_handler);
 
-    if(selector_fd_set_nio(server) == -1){
+    if(selector_fd_set_nio(pop3_server) == -1){
         err_msg = "getting server socket flags";
         goto finally;
     }
@@ -121,12 +158,26 @@ main(const int argc, char * const *argv){
             .handle_write   = NULL,
             .handle_close   = NULL,
     };
-    ss = selector_register(selector, server, &proxyPop3, OP_READ, NULL);
+    ss = selector_register(selector, pop3_server, &proxyPop3, OP_READ, NULL);
 
     if(ss != SELECTOR_SUCCESS){
-        err_msg = "registering fd";
+        err_msg = "registering pop3 fd";
         goto finally;
     }
+
+    const struct fd_handler spcpServer = {
+            .handle_read    = spcp_passive_accept,
+            .handle_write   = NULL,
+            .handle_close   = NULL,
+    };
+
+    ss = selector_register(selector, spcp_server, &spcpServer, OP_READ, NULL);
+
+    if(ss != SELECTOR_SUCCESS){
+        err_msg = "registering spcp fd";
+        goto finally;
+    }
+
     for(;!done;){
         err_msg = NULL;
         ss = selector_select(selector);
@@ -163,8 +214,8 @@ finally:
 
     free(proxy_metrics);
 
-    if(server >= 0) {
-        close(server);
+    if(pop3_server >= 0) {
+        close(pop3_server);
     }
     return ret;
 
