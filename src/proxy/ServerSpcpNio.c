@@ -208,6 +208,24 @@ spcp_passive_accept(struct selector_key *key) {
     spcp_destroy_(state);
 }
 
+
+static fd_interest
+spcp_compute_interests(fd_selector s, struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    fd_interest ret = OP_NOOP;
+    if(buffer_can_write(&spcp->read_buffer)) {
+        ret |= OP_READ;
+    }
+    if(buffer_can_read(&spcp->write_buffer)) {
+        ret |= OP_WRITE;
+    }
+    if(SELECTOR_SUCCESS != selector_set_interest(s, spcp->client_fd, ret)) {
+        abort();
+    }
+    return ret;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ///                                   USER                                   ///
 ////////////////////////////////////////////////////////////////////////////////
@@ -248,6 +266,7 @@ user_process(struct selector_key *key) {
             ret = ERROR;
         }
     }
+    spcp_compute_interests(key->s, key);
     return ret;
 }
 
@@ -343,11 +362,12 @@ pass_process(struct selector_key *key) {
             ret = ERROR;
         }
     }
+    spcp_compute_interests(key->s, key);
     return ret;
 }
 
 static unsigned
-pass_read() {
+pass_read(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
 
     buffer *b     = &spcp->read_buffer;
@@ -538,7 +558,7 @@ spcp_request_process(struct selector_key *key) {
         default:
             ret = ERROR;
     }
-
+    spcp_compute_interests(key->s, key);
     return ret;
 }
 
@@ -581,6 +601,7 @@ static const struct state_definition client_statbl[] = {
                 .state            = REQUEST_READ,
                 .on_arrival       = spcp_request_init,
                 .on_read_ready    = spcp_request_read,
+                .on_departure     = parser_close,
 
         },{
                 .state            = REQUEST_WRITE,
