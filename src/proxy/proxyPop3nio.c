@@ -23,6 +23,9 @@
 extern arguments proxyArguments;
 extern metrics  *proxy_metrics;
 
+size_t BUFFER_SIZE;
+
+
 enum pop3_state {
     RESOLVE_ADDRESS,
     CONNECTING,
@@ -132,11 +135,10 @@ struct pop3 {
     } origin;
 
     /** buffers para ser usados read_buffer, write_buffer.*/
-    //TODO: Aca se deberia modificar el tamaño del buffer en tiempo de ejecución creo
-    uint8_t request_r [512], request_w [512];
-    uint8_t response_r[512], response_w[512];
-    buffer request_r_buffer, request_w_buffer;
-    buffer response_r_buffer, response_w_buffer;
+    uint8_t *request_r,  *request_w;
+    uint8_t *response_r, *response_w;
+     buffer request_r_buffer,  request_w_buffer;
+     buffer response_r_buffer, response_w_buffer;
 
     struct request_queue *request_queue;
 
@@ -197,10 +199,16 @@ static struct pop3 * pop3_new(int client_fd){
     ret->stm    .states     = pop3_describe_states();
     stm_init(&ret->stm);
 
-    buffer_init(&ret->request_r_buffer,  N(ret->request_r) , ret->request_r);
-    buffer_init(&ret->request_w_buffer,  N(ret->request_w) , ret->request_w);
-    buffer_init(&ret->response_r_buffer, N(ret->response_r), ret->response_r);
-    buffer_init(&ret->response_w_buffer, N(ret->response_w), ret->response_w);
+    ret->request_r  = malloc(BUFFER_SIZE);
+    ret->request_w  = malloc(BUFFER_SIZE);
+    ret->response_r = malloc(BUFFER_SIZE);
+    ret->response_w = malloc(BUFFER_SIZE);
+
+    buffer_init(&ret->request_r_buffer,  BUFFER_SIZE, ret->request_r);
+    buffer_init(&ret->request_w_buffer,  BUFFER_SIZE, ret->request_w);
+    buffer_init(&ret->response_r_buffer, BUFFER_SIZE, ret->response_r);
+    buffer_init(&ret->response_w_buffer, BUFFER_SIZE, ret->response_w);
+
     ret->request_queue = malloc(sizeof(struct request_queue));
     queue_init(ret->request_queue);
 

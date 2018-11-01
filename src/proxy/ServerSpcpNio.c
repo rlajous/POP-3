@@ -27,6 +27,8 @@ extern metrics  *proxy_metrics;
 struct sctp_sndrcvinfo sndrcvinfo;
 int sctp_flags;
 
+extern int BUFFER_SIZE;
+
 enum spcp_state {
     USER_READ,
     USER_WRITE,
@@ -481,11 +483,16 @@ get_active_transformation(struct buffer *b) {
 
 static unsigned
 set_buffer_size(struct buffer *b, struct spcp_request *request) {
+    uint8_t new_size[2];
+    new_size[0] = request->arg1[0];
+    new_size[1] = request->arg1[1];
+    BUFFER_SIZE = (uint16_t)new_size;
     return REQUEST_WRITE;
 }
 
 static unsigned
 set_transformation(struct buffer *b, struct spcp_request *request) {
+
     return REQUEST_WRITE;
 }
 
