@@ -5,7 +5,8 @@
 #ifndef PROJECT_REQUEST_QUEUE_H
 #define PROJECT_REQUEST_QUEUE_H
 
-#include "../pop3Parsers/pop3request.h"
+#include <stdbool.h>
+#include <unistd.h>
 
 /**
  * A simple queue holding the relevant
@@ -33,6 +34,9 @@ pop_request(struct request_queue *q);
 
 struct request*
 peek_request(struct request_queue *q);
+
+struct request*
+peek_next_unsent(struct request_queue *q);
 
 extern bool
 queue_is_empty(struct request_queue *q);

@@ -152,9 +152,10 @@ request_parser_init(struct request_parser * p) {
     remaining_set(p, MAX_CMD_LENGTH);
     memset(&p->request, 0, sizeof(p->request));
     memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
-    p->request.cmd = unknown;
-    p->request.multi = false;
+    p->request.cmd    = unknown;
+    p->request.multi  = false;
     p->request.nargs  = 0;
+    p->request.length = 0;
 }
 
 extern bool
@@ -181,6 +182,7 @@ request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored,
         }
         const uint8_t c = buffer_read(rb);
         st = request_parser_feed(p, c);
+        p->request.length++;
         buffer_write(wb, c);
         if(request_is_done(st, errored)) {
             *errored &= request_process(p, q);

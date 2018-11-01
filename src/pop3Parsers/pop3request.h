@@ -48,6 +48,7 @@ struct request {
     //DEBE ser inicializado en 1;
     uint8_t             nargs;
     bool                multi;
+    ssize_t             length;
 };
 
 /** Estructura es consultada por el parser para obtener

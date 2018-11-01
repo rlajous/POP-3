@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "request_queue.h"
+#include "../pop3Parsers/pop3request.h"
 
 void
 queue_init(struct request_queue *q) {
@@ -45,6 +46,19 @@ pop_request(struct request_queue *q) {
 struct request*
 peek_request(struct request_queue *q) {
     return q->first->request;
+}
+
+struct request*
+peek_next_unsent(struct request_queue *q) {
+    struct node *node = q->first;
+    struct request *request = NULL;
+    ssize_t size = -1;
+    while(node != NULL && size < 0) {
+        request = node->request;
+        size = request->length;
+        node = node->next;
+    }
+    return request;
 }
 
 extern bool
