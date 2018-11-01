@@ -77,7 +77,7 @@ struct spcp_request {
 };
 
 struct spcp_request_parser {
-    struct spcp_request         *request;
+    struct spcp_request         request;
     enum   spcp_request_state   state;
     /** cantidad de argumentos */
     uint8_t nargs;

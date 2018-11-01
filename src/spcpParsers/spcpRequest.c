@@ -37,14 +37,14 @@ arg_is_done(struct spcp_request_parser *p) {
 extern void
 spcp_request_parser_init(struct spcp_request_parser *p) {
     p->state = spcp_request_cmd;
-    memset(p->request, 0, sizeof(*(p->request)));
+    memset(&p->request, 0, sizeof(p->request));
 }
 
 
 static enum spcp_request_state
 parse_request_cmd(struct spcp_request_parser *p, const uint8_t c) {
     if(c <= 0x09){
-        p->request->cmd = c;
+        p->request.cmd = c;
         return spcp_request_nargs;
     }
     return spcp_request_error_invalid_command;
@@ -60,11 +60,11 @@ static enum spcp_request_state
 parse_request_arg_size(struct spcp_request_parser *p, const uint8_t c) {
     arg_size_set(p, c);
     if(p->nargs_i == 0) {
-        p->request->arg0 = malloc(c);
-        p->request->arg0_size = c;
+        p->request.arg0 = malloc(c);
+        p->request.arg0_size = c;
     } else if( p->nargs_i == 1) {
-        p->request->arg1 = malloc(c);
-        p->request->arg1_size = c;
+        p->request.arg1 = malloc(c);
+        p->request.arg1_size = c;
     }
     return spcp_request_arg;
 }
@@ -76,9 +76,9 @@ static enum spcp_request_state
 parse_request_arg(struct spcp_request_parser *p, const uint8_t c) {
 
     if(p->nargs_i == 0) {
-        p->request->arg0[p->arg_size_i++] = c;
+        p->request.arg0[p->arg_size_i++] = c;
     } else if( p->nargs_i == 1) {
-        p->request->arg1[p->arg_size_i++] = c;
+        p->request.arg1[p->arg_size_i++] = c;
     }
 
     if(arg_is_done(p)) {
@@ -180,8 +180,8 @@ spcp_no_data_request_marshall(buffer *b, uint8_t status){
 
 extern void
 spcp_request_close(struct spcp_request_parser *p) {
-    if(p->request->arg0 != NULL)
-        free(p->request->arg0);
-    if(p->request->arg1 != NULL)
-        free(p->request->arg1);
+    if(p->request.arg0 != NULL)
+        free(p->request.arg0);
+    if(p->request.arg1 != NULL)
+        free(p->request.arg1);
 }

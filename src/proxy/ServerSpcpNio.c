@@ -224,18 +224,18 @@ user_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
     unsigned ret = USER_WRITE;
 
-    struct spcp_request *request = spcp->parser.request;
+    struct spcp_request *request = &spcp->parser.request;
     if(spcp->username == NULL)
-        spcp->username = malloc(spcp->parser.request->arg0_size + 1);
+        spcp->username = malloc(spcp->parser.request.arg0_size + 1);
     else
-        spcp->username = realloc(spcp->username, spcp->parser.request->arg0_size +1);
+        spcp->username = realloc(spcp->username, spcp->parser.request.arg0_size +1);
     if(spcp->username == NULL){
         spcp->status = spcp_err;
         //TODO: che facciamo?
     }
 
-    memcpy(spcp->username, spcp->parser.request->arg0, spcp->parser.request->arg0_size);
-    spcp->username[spcp->parser.request->arg0_size + 1] = '\0';
+    memcpy(spcp->username, spcp->parser.request.arg0, spcp->parser.request.arg0_size);
+    spcp->username[spcp->parser.request.arg0_size + 1] = '\0';
 
     if(user_present(spcp->username)) {
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
@@ -328,9 +328,9 @@ pass_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
     unsigned ret = PASS_WRITE;
 
-    char pass[spcp->parser.request->arg0_size + 1];
-    memcpy(pass, spcp->parser.request->arg0, spcp->parser.request->arg0_size);
-    pass[spcp->parser.request->arg0_size + 1] = '\0';
+    char pass[spcp->parser.request.arg0_size + 1];
+    memcpy(pass, spcp->parser.request.arg0, spcp->parser.request.arg0_size);
+    pass[spcp->parser.request.arg0_size + 1] = '\0';
 
     if(validate_user(spcp->username, pass)) {
         spcp->status = spcp_success;
@@ -504,7 +504,7 @@ do_quit(struct buffer *b) {
 static unsigned
 spcp_request_process(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
-    struct spcp_request *request = spcp->parser.request;
+    struct spcp_request *request = &spcp->parser.request;
     unsigned ret;
 
     if(request->cmd <= spcp_pass){

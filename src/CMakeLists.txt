@@ -8,6 +8,8 @@ add_executable(proxyPop main.c
         pop3Parsers/pop3request.c
         utils/proxyArguments.c
         utils/request_queue.c
+        utils/parser.c
+        utils/parser_utils.c
         pop3Parsers/pop3response.c
         pop3Parsers/pop3response.h
         proxy/ServerSpcpNio.c proxy/ServerSpcpNio.h
