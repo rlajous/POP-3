@@ -268,7 +268,7 @@ user_read(struct selector_key *key) {
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
-        if(request_is_done(st, 0)) {
+        if(spcp_request_is_done(st, 0)) {
             ret = user_process(key);
         }
     } else {
@@ -362,7 +362,7 @@ pass_read() {
     if(n > 0) {
         buffer_write_adv(b, n);
         int st = spcp_request_consume(b, &spcp->parser, &error);
-        if(request_is_done(st, 0)) {
+        if(spcp_request_is_done(st, 0)) {
             ret = pass_process(key);
         }
     } else {

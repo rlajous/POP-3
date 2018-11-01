@@ -106,4 +106,7 @@ spcp_data_request_marshall(buffer *b, uint8_t status, char *data);
 extern void
 spcp_request_close(struct spcp_request_parser *p);
 
+extern bool
+spcp_request_is_done(enum spcp_request_state st, bool *errored);
+
 #endif

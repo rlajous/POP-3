@@ -16,7 +16,7 @@ add_executable(proxyPop main.c
         proxy/spcpServerCredentials.c
         proxy/spcpServerCredentials.h)
 find_package(Threads)
-target_link_libraries(proxyPop ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(proxyPop ${CMAKE_THREAD_LIBS_INIT} sctp)
 
 if(CHECK_FOUND)
     add_executable(request_test
