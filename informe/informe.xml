@@ -10,6 +10,21 @@
         Instituto Tecnológico de Buenos Aires
       </organization>
     </author>
+    <author initials="R.M.N.L" surname="Navarro Lajous" fullname="Rodrigo Manuel Navarro Lajous">
+      <organization>
+        Instituto Tecnológico de Buenos Aires
+      </organization>
+    </author>
+    <author initials="S.F" surname="Favarón" fullname="Sebastián Favaron">
+      <organization>
+        Instituto Tecnológico de Buenos Aires
+      </organization>
+    </author>
+    <author initials="A.C." surname="Calatayud" fullname="Agustín Calatayud">
+      <organization>
+        Instituto Tecnológico de Buenos Aires
+      </organization>
+    </author>
     <date month="11" year="2018"/>
     <area>Protocolos de Comunicación</area>
     <workgroup>Grupo 7</workgroup>
@@ -21,21 +36,25 @@
   <middle>
     <section anchor="intro" title="Introducción">
       <t>
-        <list style="numbers">
-          <t>The first item.</t>
-          <t>The second item, which contains two bulleted sub-items:
-            <list style="symbols">
-              <t>The first sub-item.</t>
-              <t>The second sub-item.</t>
-            </list>
-          </t>
-        </list>
+
+        <!--<list style="numbers">-->
+          <!--<t>The first item.</t>-->
+          <!--<t>The second item, which contains two bulleted sub-items:-->
+            <!--<list style="symbols">-->
+              <!--<t>The first sub-item.</t>-->
+              <!--<t>The second sub-item.</t>-->
+            <!--</list>-->
+          <!--</t>-->
+        <!--</list>-->
       </t>
+    </section>
+    <section title="Prtocolo SPCP">
+      <section title=""
     </section>
   </middle>
   <back>
     <references>
-      <reference anchor="">
+      <reference anchor="TODO">
         <front>
           <title>Server Socks V5</title>
           <author fullname="Juan F. Codagnone" initials="J.F.C">
