@@ -152,7 +152,7 @@ spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored) {
 }
 
 extern int
-spcp_data_request_marshall(buffer *b, uint8_t status, char *data){
+spcp_data_request_marshall(buffer *b, uint8_t status, char *data, size_t data_len){
     uint8_t *ptr;
     size_t  count;
 
@@ -161,9 +161,9 @@ spcp_data_request_marshall(buffer *b, uint8_t status, char *data){
         return -1;
 
     buffer_write(b, status);
-    buffer_write(b, sizeof(data));
-    memcpy(ptr, (uint8_t *)&data, sizeof(data));
-    buffer_write_adv(b, sizeof(data));
+    buffer_write(b, (uint8_t)data_len);
+    memcpy(ptr, (uint8_t *)&data, data_len);
+    buffer_write_adv(b, data_len);
 
     return sizeof(data) + 2;
 }

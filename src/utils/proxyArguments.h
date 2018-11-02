@@ -33,4 +33,7 @@ parse_arguments(int argc, char * const * argv);
 void
 destroy_arguments(arguments args);
 
+static char *
+modify_string(char * old_string, const char * new_string);
+
 #endif

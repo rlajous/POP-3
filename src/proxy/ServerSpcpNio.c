@@ -463,7 +463,7 @@ get_concurrent_connections(struct buffer *b,  enum spcp_response_status *status)
     sprintf(serialized_data, "%d", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
         return ERROR;
     }
         return REQUEST_WRITE;
@@ -483,7 +483,7 @@ get_transfered_bytes(struct buffer *b,  enum spcp_response_status *status) {
     sprintf(serialized_data, "%llu", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
         return ERROR;
     }
     return REQUEST_WRITE;
@@ -503,7 +503,7 @@ get_historical_accesses(struct buffer *b, enum spcp_response_status *status) {
     sprintf(serialized_data, "%lu", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
         return ERROR;
     }
     return REQUEST_WRITE;
@@ -539,6 +539,10 @@ set_buffer_size(struct buffer *b, struct spcp_request *request, enum spcp_respon
     new_size[1] = request->arg0[1];
     BUFFER_SIZE = (uint16_t)new_size;
     *status = spcp_success;
+
+    if( -1 == spcp_no_data_request_marshall(b, spcp_success)) {
+        return ERROR;
+    }
     return REQUEST_WRITE;
 }
 

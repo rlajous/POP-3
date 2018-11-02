@@ -101,7 +101,7 @@ extern int
 spcp_no_data_request_marshall(buffer *b, uint8_t status);
 
 extern int
-spcp_data_request_marshall(buffer *b, uint8_t status, char *data);
+spcp_data_request_marshall(buffer *b, uint8_t status, char *data, size_t data_len);
 
 extern void
 spcp_request_close(struct spcp_request_parser *p);
