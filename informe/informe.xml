@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<rfc>
+  <front>
+    <title>
+      Informe TPE Protocolos de comunicación
+    </title>
+    <author initials="F.D." surname="Delgado" fullname="Francisco Delgado">
+      <organization>
+        Instituto Tecnológico de Buenos Aires
+      </organization>
+    </author>
+    <date month="11" year="2018"/>
+    <area>Protocolos de Comunicación</area>
+    <workgroup>Grupo 7</workgroup>
+    <abstract>
+      <t>This memo blah blah blah....
+      </t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="intro" title="Introducción">
+      <t>
+        <list style="numbers">
+          <t>The first item.</t>
+          <t>The second item, which contains two bulleted sub-items:
+            <list style="symbols">
+              <t>The first sub-item.</t>
+              <t>The second sub-item.</t>
+            </list>
+          </t>
+        </list>
+      </t>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <reference anchor="">
+        <front>
+          <title>Server Socks V5</title>
+          <author fullname="Juan F. Codagnone" initials="J.F.C">
+            <organization>Juan F. Codagnone</organization>
+            <address>
+              <email>juan@leak.com.ar</email>
+            </address>
+          </author>
+          <date month="3" year="2018"/>
+        </front>
+      </reference>
+    </references>
+  </back>
+</rfc>
+
