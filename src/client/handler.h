@@ -1,0 +1,10 @@
+int handleUser(char *user);
+int handlePassword(char *password);
+int handleTransferedBytes();
+int handleConcurrentConection();
+int handleActiveTrasnformation();
+int handleBufferSize();
+int handleTransformationChange();
+int handleTimeOut();
+int handleQuit();
+void printDatagram();
