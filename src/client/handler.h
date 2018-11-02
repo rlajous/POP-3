@@ -1,4 +1,5 @@
-int handleLogin();
+int handleUser();
+int handlePassword();
 int handleTransferedBytes();
 int handleConcurrentConection();
 int handleActiveTrasnformation();
