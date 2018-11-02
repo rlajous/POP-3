@@ -46,6 +46,8 @@ int handleTransferedBytes()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
   if (ret[1] == 0)
   {
     printf("%s", ret) :
@@ -54,8 +56,6 @@ int handleTransferedBytes()
   {
     printf("error");
   }
-  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -68,6 +68,8 @@ int handleHistoricAcces()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
   if (ret[1] == 0)
   {
     printf("%s", ret) :
@@ -76,8 +78,6 @@ int handleHistoricAcces()
   {
     printf("error");
   }
-  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -90,6 +90,8 @@ int handleActiveTrasnformation()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
   if (ret[1] == 0)
   {
     printf("%s", ret) :
@@ -98,8 +100,6 @@ int handleActiveTrasnformation()
   {
     printf("error");
   }
-  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -128,6 +128,14 @@ int handleBufferSize()
                      NULL, 0, 0, 0, STREAM, 0, 0);
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
   return 0;
 }
 
@@ -156,6 +164,14 @@ int handleTransformationChange()
                      NULL, 0, 0, 0, STREAM, 0, 0);
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
   return 0;
 }
 
@@ -185,6 +201,14 @@ int handleTimeOut()
 
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
   return 0;
 }
 
@@ -212,6 +236,8 @@ int handleQuit()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
   if (ret[1] == 0)
   {
     printf("%s", ret) :
@@ -220,8 +246,6 @@ int handleQuit()
   {
     printf("error");
   }
-  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
