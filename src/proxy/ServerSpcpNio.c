@@ -118,6 +118,9 @@ spcp_destroy_(struct spcp* s) {
         freeaddrinfo(s->origin_resolution);
         s->origin_resolution = 0;
     }
+    if(s->username != NULL) {
+        free(s->username);
+    }
     free(s);
 }
 
