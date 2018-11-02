@@ -19,10 +19,12 @@
 #include "../utils/metrics.h"
 #include "../spcpParsers/spcpRequest.h"
 #include "spcpServerCredentials.h"
+#include "../utils/proxyArguments.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 extern metrics  *proxy_metrics;
+extern arguments proxyArguments;
 
 struct sctp_sndrcvinfo sndrcvinfo;
 int sctp_flags;
@@ -509,6 +511,17 @@ get_historical_accesses(struct buffer *b, enum spcp_response_status *status) {
 
 static unsigned
 get_active_transformation(struct buffer *b, enum spcp_response_status *status) {
+
+    if(proxyArguments->command != NULL) {
+        if( -1 == spcp_data_request_marshall(b, 0x00, proxyArguments->command, strlen(proxyArguments->command) -1 )) {
+            return ERROR;
+        }
+    } else {
+        if( -1 == spcp_data_request_marshall(b, 0x00, "", 1)) {
+            return ERROR;
+        }
+    }
+
     *status = spcp_success;
     return REQUEST_WRITE;
 }
@@ -532,6 +545,15 @@ set_buffer_size(struct buffer *b, struct spcp_request *request, enum spcp_respon
 static unsigned
 set_transformation(struct buffer *b, struct spcp_request *request, enum spcp_response_status *status) {
     *status = spcp_success;
+
+    char new_command[request->arg0_size + 1];
+    memcpy(new_command, request->arg0, request->arg0_size);
+    new_command[request->arg0_size + 1] = '\0';
+    proxyArguments->command = modify_string(proxyArguments->command, new_command);
+
+    if( -1 == spcp_no_data_request_marshall(b, spcp_success)) {
+        return ERROR;
+    }
     return REQUEST_WRITE;
 }
 
