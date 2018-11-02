@@ -33,7 +33,7 @@ int handleConcurrentConection()
     printf("error");
   }
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -55,7 +55,7 @@ int handleTransferedBytes()
     printf("error");
   }
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -77,7 +77,7 @@ int handleHistoricAcces()
     printf("error");
   }
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -99,7 +99,7 @@ int handleActiveTrasnformation()
     printf("error");
   }
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
@@ -127,7 +127,7 @@ int handleBufferSize()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 0;
 }
 
@@ -155,7 +155,7 @@ int handleTransformationChange()
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 0;
 }
 
@@ -184,14 +184,14 @@ int handleTimeOut()
                      NULL, 0, 0, 0, STREAM, 0, 0);
 
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 0;
 }
 
 int handleHelp()
 {
   printf("\nThese are the following commands: \n");
-  printf("0 -> HELP\n\n");
+  printf("0 -> Help\n\n");
   printf("1 -> Concurrent Conection\n\n");
   printf("2 -> Transfered Byte\n\n");
   printf("3 -> History Acces\n\n");
@@ -221,7 +221,7 @@ int handleQuit()
     printf("error");
   }
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
-                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+                     (struct sockaddr *)NULL, 0, 0, 0);
   return 1;
 }
 
