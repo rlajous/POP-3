@@ -15,6 +15,56 @@
 #include <unistd.h>
 #include <errno.h>
 
+int handleUser(char *user)
+{
+  char command = 0, nargs = 1, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  int lenght = strlen(user);
+  datagram[2] = lenght;
+  datagram[3] = user;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
+
+int handlePassword(char *password)
+{
+  char command = 1, nargs = 1, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  int lenght = strlen(password);
+  datagram[2] = lenght;
+  datagram[3] = password;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, 0, 0);
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
+
 int handleConcurrentConection()
 {
   char command = 2, nargs = 0, ret;
