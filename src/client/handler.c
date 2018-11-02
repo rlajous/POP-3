@@ -26,7 +26,6 @@ int handleUser(char *user)
   datagram[3] = user;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 3 + length / 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -51,7 +50,6 @@ int handlePassword(char *password)
   datagram[3] = password;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 3 + length / 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -72,7 +70,6 @@ int handleConcurrentConection()
   datagram[1] = nargs;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -94,7 +91,6 @@ int handleTransferedBytes()
   datagram[1] = nargs;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -116,7 +112,6 @@ int handleHistoricAcces()
   datagram[1] = nargs;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -138,7 +133,6 @@ int handleActiveTrasnformation()
   datagram[1] = nargs;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -169,7 +163,6 @@ int handleBufferSize()
     }
     else
     {
-      //to do format data
       sscanf(buffer, "%s ", datagram[2]);
       datagram[2] = atoi(datagram[2]);
     }
@@ -242,7 +235,6 @@ int handleTimeOut()
     }
     else
     {
-      //to do format data
       sscanf(buffer, "%s %s", datagram[2], datagram[3]);
       datagram[2] = atoi(datagram[2]);
       datagram[3] = atoi(datagram[3]);
@@ -250,7 +242,6 @@ int handleTimeOut()
   }
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -287,7 +278,6 @@ int handleQuit()
   datagram[1] = nargs;
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
-  //Close connection after recieving response
   ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
                      (struct sockaddr *)NULL, 0, 0, 0);
   if (res[0] == 0)
@@ -303,7 +293,6 @@ int handleQuit()
 
 void printDatagram(uint8_t *datagram, int size)
 {
-  //Print Datagram for debbuging
   printf("Datagram: ");
   for (int i = 0; i < size; ++i)
     printf("[%d]%02x[%c]-", i, datagram[i], datagram[i]);

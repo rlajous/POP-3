@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   int port;
   char address[16];
   if (argc == 3)
-  { //Custom port and ip
+  {
     int port_in = atoi(argv[2]);
     if (validIpAddress(argv[1]))
     {
@@ -49,10 +49,10 @@ int main(int argc, char *argv[])
     else
     {
       printf(" Bad IP argument, using default value.\n");
-      strcpy(address, DEFAULT_IP); //Localhost
+      strcpy(address, DEFAULT_IP);
     }
     if (port_in > 1024 && port_in < 60000)
-    { //Valid ports
+    {
       port = port_in;
     }
     else
@@ -62,11 +62,11 @@ int main(int argc, char *argv[])
     }
   }
   else if (argc == 2)
-  { //Custom port
+  {
     int port_in = atoi(argv[1]);
     strcpy(address, DEFAULT_IP);
     if (port_in > 1024 && port_in < 60000)
-    { //Valid ports
+    {
       port = port_in;
     }
     else
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     }
   }
   else
-  { //Default values
+  {
     if (argc == 1)
       printf(" No arguments, using default values.\n");
     else
@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
   }
   printf(" Trying to connect to %s:%d\n", address, port);
 
-  /* Create an SCTP TCP-Style Socket */
   connSock = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 
   if (connSock == -1)
@@ -94,13 +93,11 @@ int main(int argc, char *argv[])
     exit();
   }
 
-  /* Specify the peer endpoint to which we'll connect */
   bzero((void *)&servaddr, sizeof(servaddr));
   servaddr.sin_family = AF_INET;
   servaddr.sin_port = htons(port);
   servaddr.sin_addr.s_addr = inet_addr(address);
 
-  /* Connect to the server */
   ret = connect(connSock, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
   if (ret < 0)
@@ -111,7 +108,6 @@ int main(int argc, char *argv[])
 
   printf("SPCP PROTOCOL CLIENT STARTED\n");
   printf("        Please login        \n");
-  // Start J2M2 Logic
   int exit = 1;
   while (exit)
   {
