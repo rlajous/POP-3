@@ -32,6 +32,8 @@ int handleConcurrentConection()
   {
     printf("error");
   }
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
   return 1;
 }
 
@@ -52,6 +54,8 @@ int handleTransferedBytes()
   {
     printf("error");
   }
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
   return 1;
 }
 
@@ -72,6 +76,8 @@ int handleHistoricAcces()
   {
     printf("error");
   }
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
   return 1;
 }
 
@@ -92,6 +98,8 @@ int handleActiveTrasnformation()
   {
     printf("error");
   }
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
   return 1;
 }
 
@@ -118,6 +126,9 @@ int handleBufferSize()
   }
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+  return 0;
 }
 
 int handleTransformationChange()
@@ -143,6 +154,9 @@ int handleTransformationChange()
   }
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+  return 0;
 }
 
 int handleTimeOut()
@@ -168,6 +182,10 @@ int handleTimeOut()
   }
   ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
+
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
+  return 0;
 }
 
 int handleHelp()
@@ -202,6 +220,8 @@ int handleQuit()
   {
     printf("error");
   }
+  ret = sctp_recvmsg(connSock, (void *)res, MAX_DATAGRAM_SIZE,
+                     (struct sockaddr *)NULL, 0, &sndrcvinfo, &flags);
   return 1;
 }
 
