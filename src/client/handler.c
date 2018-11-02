@@ -185,24 +185,23 @@ int handleHelp()
   return 0;
 }
 
-int handleExit(char *second, char *third, int connSock)
+int handleQuit()
 {
-  char type = 3, command = 6, argsq = 0, code = 0, ret;
+  char command = 6, nargs = 0, ret;
   uint8_t datagram[MAX_DATAGRAM];
-
-  if (second[0])
-  {
-    printf(" Parameters not allowed. \n");
-    return 0;
-  }
-
-  datagram[0] = type;
-  datagram[1] = command;
-  datagram[2] = argsq;
-  datagram[3] = code;
-  ret = sctp_sendmsg(connSock, (const void *)datagram, 4,
+  datagram[0] = command;
+  datagram[1] = nargs;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
                      NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
   return 1;
 }
 
