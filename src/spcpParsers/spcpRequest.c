@@ -60,10 +60,10 @@ static enum spcp_request_state
 parse_request_arg_size(struct spcp_request_parser *p, const uint8_t c) {
     arg_size_set(p, c);
     if(p->nargs_i == 0) {
-        p->request.arg0 = malloc(c);
+        p->request.arg0 = malloc(c+1);
         p->request.arg0_size = c;
     } else if( p->nargs_i == 1) {
-        p->request.arg1 = malloc(c);
+        p->request.arg1 = malloc(c+1);
         p->request.arg1_size = c;
     }
     return spcp_request_arg;
@@ -82,10 +82,16 @@ parse_request_arg(struct spcp_request_parser *p, const uint8_t c) {
     }
 
     if(arg_is_done(p)) {
+        if(p->nargs_i == 0) {
+            p->request.arg0[p->arg_size_i] = '\0';
+        } else if( p->nargs_i == 1) {
+            p->request.arg1[p->arg_size_i] = '\0';
+        }
+
+        p->nargs_i++;
         if(remaining_args_is_done(p)){
-            return request_validate(p);
+            return spcp_request_done;
         } else {
-            p->nargs_i++;
             return spcp_request_arg_size;
         }
     }
@@ -119,6 +125,7 @@ spcp_request_parser_feed(struct spcp_request_parser *p, const uint8_t c){
             next = spcp_request_error;
             break;
     }
+    p->state = next;
     return next;
 }
 
@@ -142,11 +149,6 @@ spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored) {
         }
     }
     return st;
-}
-
-static enum spcp_request_state
-request_validate(struct spcp_request_parser *p) {
-    //TODO: validate the command based on the inputs
 }
 
 extern int

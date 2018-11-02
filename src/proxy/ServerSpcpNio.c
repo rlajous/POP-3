@@ -269,7 +269,9 @@ user_process(struct selector_key *key) {
             ret = ERROR;
         }
     }
-    spcp_compute_interests(key->s, key);
+    if(SELECTOR_SUCCESS != selector_set_interest_key(key, OP_WRITE)) {
+        return ERROR;
+    }
     return ret;
 }
 
@@ -311,6 +313,7 @@ user_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
+    //TODO(fran): propperly handle SIGPIPE
     n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0 );
     if(n == -1) {
         ret = ERROR;
@@ -365,7 +368,9 @@ pass_process(struct selector_key *key) {
             ret = ERROR;
         }
     }
-    spcp_compute_interests(key->s, key);
+    if(SELECTOR_SUCCESS != selector_set_interest_key(key, OP_WRITE)) {
+        return ERROR;
+    }
     return ret;
 }
 
@@ -400,7 +405,7 @@ static unsigned
 pass_write(struct selector_key *key) {
     struct spcp *spcp = ATTACHMENT(key);
 
-    unsigned  ret     = USER_WRITE;
+    unsigned  ret     = PASS_WRITE;
     struct buffer *wb = &spcp->write_buffer;
     uint8_t *ptr;
     size_t  count;
@@ -443,7 +448,7 @@ spcp_request_init(const unsigned state, struct selector_key *key) {
 }
 
 static unsigned
-get_concurrent_connections(struct buffer *b) {
+get_concurrent_connections(struct buffer *b,  enum spcp_response_status *status) {
     unsigned data = proxy_metrics->concurrent_connections;
 
     int digits = 0;
@@ -455,6 +460,7 @@ get_concurrent_connections(struct buffer *b) {
     char serialized_data[digits + 1];
     sprintf(serialized_data, "%d", data);
 
+    *status = spcp_success;
     if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
@@ -462,7 +468,7 @@ get_concurrent_connections(struct buffer *b) {
 }
 
 static unsigned
-get_transfered_bytes(struct buffer *b) {
+get_transfered_bytes(struct buffer *b,  enum spcp_response_status *status) {
     unsigned long long data = proxy_metrics->bytes;
 
     int digits = 0;
@@ -474,6 +480,7 @@ get_transfered_bytes(struct buffer *b) {
     char serialized_data[digits + 1];
     sprintf(serialized_data, "%llu", data);
 
+    *status = spcp_success;
     if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
@@ -481,7 +488,7 @@ get_transfered_bytes(struct buffer *b) {
 }
 
 static unsigned
-get_historical_accesses(struct buffer *b) {
+get_historical_accesses(struct buffer *b, enum spcp_response_status *status) {
     unsigned long data = proxy_metrics->historic_connections;
 
     int digits = 0;
@@ -493,6 +500,7 @@ get_historical_accesses(struct buffer *b) {
     char serialized_data[digits + 1];
     sprintf(serialized_data, "%lu", data);
 
+    *status = spcp_success;
     if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data)) {
         return ERROR;
     }
@@ -500,22 +508,30 @@ get_historical_accesses(struct buffer *b) {
 }
 
 static unsigned
-get_active_transformation(struct buffer *b) {
+get_active_transformation(struct buffer *b, enum spcp_response_status *status) {
+    *status = spcp_success;
     return REQUEST_WRITE;
 }
 
 static unsigned
-set_buffer_size(struct buffer *b, struct spcp_request *request) {
+set_buffer_size(struct buffer *b, struct spcp_request *request, enum spcp_response_status *status) {
     uint8_t new_size[2];
-    new_size[0] = request->arg1[0];
-    new_size[1] = request->arg1[1];
+    if(request->arg0_size < 2){
+        *status = spcp_invalid_arguments;
+        if( -1 == spcp_no_data_request_marshall(b, spcp_invalid_arguments)) {
+            return ERROR;
+        }
+    }
+    new_size[0] = request->arg0[0];
+    new_size[1] = request->arg0[1];
     BUFFER_SIZE = (uint16_t)new_size;
+    *status = spcp_success;
     return REQUEST_WRITE;
 }
 
 static unsigned
-set_transformation(struct buffer *b, struct spcp_request *request) {
-
+set_transformation(struct buffer *b, struct spcp_request *request, enum spcp_response_status *status) {
+    *status = spcp_success;
     return REQUEST_WRITE;
 }
 
@@ -539,27 +555,32 @@ spcp_request_process(struct selector_key *key) {
 
     switch(request->cmd){
         case spcp_concurrent_connections:
-            ret = get_concurrent_connections(&spcp->write_buffer);
+            ret = get_concurrent_connections(&spcp->write_buffer, &spcp->status);
             break;
         case spcp_transfered_bytes:
-            ret = get_transfered_bytes(&spcp->write_buffer);
+            ret = get_transfered_bytes(&spcp->write_buffer, &spcp->status);
             break;
         case spcp_historical_accesses:
-            ret = get_historical_accesses(&spcp->write_buffer);
+            ret = get_historical_accesses(&spcp->write_buffer, &spcp->status);
             break;
         case spcp_active_transformation:
-            ret = get_active_transformation(&spcp->write_buffer);
+            ret = get_active_transformation(&spcp->write_buffer, &spcp->status);
             break;
         case spcp_set_buffer_size:
-            ret = set_buffer_size(&spcp->write_buffer, request);
+            ret = set_buffer_size(&spcp->write_buffer, request, &spcp->status);
             break;
         case spcp_change_transformation:
-            ret = set_transformation(&spcp->write_buffer, request);
+            ret = set_transformation(&spcp->write_buffer, request, &spcp->status);
             break;
         case spcp_quit:
             ret = do_quit(&spcp->write_buffer);
+            break;
         default:
+            spcp->status = spcp_invalid_command;
             ret = ERROR;
+    }
+    if(ret == ERROR){
+        spcp->status = spcp_err;
     }
     spcp_compute_interests(key->s, key);
     return ret;
@@ -568,9 +589,58 @@ spcp_request_process(struct selector_key *key) {
 
 static unsigned
 spcp_request_read(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
 
+    buffer *b     = &spcp->read_buffer;
+    unsigned  ret   = USER_READ;
+    bool  error = false;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
 
+    ptr = buffer_write_ptr(b, &count);
+    n = sctp_recvmsg(key->fd, ptr, count, (struct sockaddr *) NULL, 0, &sndrcvinfo, &sctp_flags);
+    if(n > 0) {
+        buffer_write_adv(b, n);
+        int st = spcp_request_consume(b, &spcp->parser, &error);
+        if(spcp_request_is_done(st, 0)) {
+            ret = spcp_request_process(key);
+        }
+    } else {
+        ret = ERROR;
+    }
+
+    return error ? ERROR : ret;
 }
+
+
+static unsigned
+spcp_request_write(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+
+    unsigned  ret     = REQUEST_WRITE;
+    struct buffer *wb = &spcp->write_buffer;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_read_ptr(wb, &count);
+    n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(wb, n);
+        if(!buffer_can_read(wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = REQUEST_READ;
+            } else {
+                ret = ERROR;
+            }
+        }
+    }
+    return ret;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static void
@@ -608,6 +678,7 @@ static const struct state_definition client_statbl[] = {
 
         },{
                 .state            = REQUEST_WRITE,
+                .on_write_ready   = spcp_request_write,
         },{
                 .state            = DONE,
         },{
