@@ -1,5 +1,5 @@
 #ifndef MAX_DATAGRAM
-  #define MAX_DATAGRAM 132
+#define MAX_DATAGRAM 132
 #endif
 
 #include <stdio.h>
@@ -15,15 +15,100 @@
 #include <unistd.h>
 #include <errno.h>
 
-int handleConcurrentConection();
-int handleTransferedBytes();
-int handleHistoricAcces();
-int handleActiveTrasnformation();
-int handleBufferSize();
-int handleTransformationChange();
-int handleTimeOut();
+int handleConcurrentConection()
+{
+  char command = 2, nargs = 0, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
 
-int handleHelp(){
+int handleTransferedBytes()
+{
+  char command = 3, nargs = 0, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
+
+int handleHistoricAcces()
+{
+  char command = 4, nargs = 0, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
+
+int handleActiveTrasnformation()
+{
+  char command = 5, nargs = 0, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
+  //Close connection after recieving response
+  if (ret[1] == 0)
+  {
+    printf("%s", ret) :
+  }
+  else
+  {
+    printf("error");
+  }
+  return 1;
+}
+
+int handleBufferSize()
+{
+}
+
+int handleTransformationChange()
+{
+}
+
+int handleTimeOut()
+{
+}
+
+int handleHelp()
+{
   printf("\nThese are the following commands: \n");
   printf("0 -> HELP\n\n");
   printf("1 -> Concurrent Conection\n\n");
@@ -37,29 +122,32 @@ int handleHelp(){
   return 0;
 }
 
-int handleExit(char * second, char * third, int connSock){
+int handleExit(char *second, char *third, int connSock)
+{
   char type = 3, command = 2, argsq = 0, code = 0, ret;
   uint8_t datagram[MAX_DATAGRAM];
- 
-  if(second[0]){
+
+  if (second[0])
+  {
     printf(" Parameters not allowed. \n");
     return 0;
-  }  
+  }
 
   datagram[0] = type;
   datagram[1] = command;
   datagram[2] = argsq;
   datagram[3] = code;
-  ret = sctp_sendmsg( connSock, (const void *)datagram, 4,
-                         NULL, 0, 0, 0, STREAM, 0, 0 );    
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 4,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
   //Close connection after recieving response
   return 1;
 }
 
-void printDatagram(uint8_t * datagram, int size){
+void printDatagram(uint8_t *datagram, int size)
+{
   //Print Datagram for debbuging
   printf("Datagram: ");
   for (int i = 0; i < size; ++i)
-    printf("[%d]%02x[%c]-",i, datagram[i], datagram[i]);
+    printf("[%d]%02x[%c]-", i, datagram[i], datagram[i]);
   printf("\n");
 }
