@@ -97,14 +97,77 @@ int handleActiveTrasnformation()
 
 int handleBufferSize()
 {
+  int exit = 1;
+  char command = 10, nargs = 1, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  while (exit)
+  {
+    printf(" Enter buffer size \n");
+    exit = fgets(buffer, sizeof(buffer), stdin) == NULL;
+    if (exit)
+    {
+      printf(" No characters read \n");
+    }
+    else
+    {
+      //to do format data
+      sscanf(buffer, "%s ", datagram[2]);
+    }
+  }
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
 }
 
 int handleTransformationChange()
 {
+  int exit = 1;
+  char command = 10, nargs = 1, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  while (exit)
+  {
+    printf(" Enter buffer size \n");
+    exit = fgets(buffer, sizeof(buffer), stdin) == NULL;
+    if (exit)
+    {
+      printf(" No characters read \n");
+    }
+    else
+    {
+      //to do format data
+      sscanf(buffer, "%s ", datagram[2]);
+    }
+  }
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
 }
 
 int handleTimeOut()
 {
+  int exit = 1;
+  char command = 10, nargs = 1, ret;
+  uint8_t datagram[MAX_DATAGRAM];
+  datagram[0] = command;
+  datagram[1] = nargs;
+  while (exit)
+  {
+    printf(" Enter buffer size \n");
+    exit = fgets(buffer, sizeof(buffer), stdin) == NULL;
+    if (exit)
+    {
+      printf(" No characters read \n");
+    }
+    else
+    {
+      //to do format data
+      sscanf(buffer, "%s %s", datagram[2], datagram[3]);
+    }
+  }
+  ret = sctp_sendmsg(connSock, (const void *)datagram, 2,
+                     NULL, 0, 0, 0, STREAM, 0, 0);
 }
 
 int handleHelp()
@@ -124,7 +187,7 @@ int handleHelp()
 
 int handleExit(char *second, char *third, int connSock)
 {
-  char type = 3, command = 2, argsq = 0, code = 0, ret;
+  char type = 3, command = 6, argsq = 0, code = 0, ret;
   uint8_t datagram[MAX_DATAGRAM];
 
   if (second[0])
