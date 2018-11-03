@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include "common.h"
 #include <netinet/sctp.h>
-#include "handlers.h"
+#include "handler.h"
 
 #define PROXY_SCTP_PORT 9090
 #define DEFAULT_PORT 9090
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
   if (connSock == -1)
   {
-    exit();
+    exit(0);
   }
 
   bzero((void *)&servaddr, sizeof(servaddr));
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
         if (fgets(buffer, sizeof(buffer), stdin) != NULL)
         {
           sscanf(buffer, "%s %s %s", first, second, third);
-          flag = handleUser(first);
+          flag = handleUser(first, connSock);
         }
         else
         {
@@ -153,10 +153,10 @@ int main(int argc, char *argv[])
           printf(" No characters read \n");
         }
       }
-      helpHandler();
+      handleHelp();
       while (exit != 0)
       {
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
+        if (fgets((char *)buffer, sizeof(buffer), stdin) == NULL)
         {
           printf(" No characters read, for more help enter number 0\n");
         }
@@ -166,31 +166,31 @@ int main(int argc, char *argv[])
           switch (first)
           {
           case '0':
-            handleHelp();
+            handleHelp(connSock);
             break;
           case '1':
-            handleConcurrentConection();
+            handleConcurrentConection(connSock);
             break;
           case '2':
-            handleTransferedBytes();
+            handleTransferedBytes(connSock);
             break;
           case '3':
-            handleHistoricAcces();
+            handleHistoricAccess(connSock);
             break;
           case '4':
-            handleActiveTrasnformation();
+            handleActiveTransformation(connSock);
             break;
           case '5':
-            handleBufferSize();
+            handleBufferSize(connSock);
             break;
           case '6':
-            handleTransformationChange();
+            handleTransformationChange(connSock);
             break;
           case '7':
-            handleTimeOut();
+            handleTimeOut(connSock);
             break;
           case '8':
-            exit = handleQuit();
+            exit = handleQuit(connSock);
             break;
           }
         }
