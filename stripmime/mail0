@@ -1,0 +1,13 @@
+asdasd: a
+content-type: multipart/asd; boundary="ddd" waw
+content-transfer: base64
+
+d
+
+--tempboundary
+
+content-type: asd;
+
+a
+--tempboundary--
+content-type: dsa;

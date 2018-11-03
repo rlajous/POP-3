@@ -1,0 +1,22 @@
+//TODO: donde deje: lee bien el key y pasa a ST_NAME pero lo confunde el \r\n
+//TODO: redefinir el parser boundary_border
+//TODO: ver cuando imprimir los puntos al principio de linea (por ahora imprime siempre)
+//TODO: ver que hacer con los unexpected
+//TODO: sacar los "escribir" de los events cuando termine el stripmime
+//TODO: documentar que no contemplamos content-transfer-encoding antes de content-type (que haria el mensaje de reemplazo ilegible acualmente)
+
+______________________________________________________________________________________________________________________________________________
+
+Clase firewall:
+
+modificar firewall: iptables. 3 tablas, filter nat y algo que no importa
+nat: pre y post routing
+filter: ?
+importante ver donde poner la regla
+filtrar paquete entrante lo pongo en input, contrario output
+
+reglas: condicion (depende donde estes)(si es udp o tcp, a\de donde va) y accion (accept, drop (no avisa), reject (avisa), log)
+
+
+.: 	como se que termino si en el body puede haber un enter . enter?
+..: anda piola

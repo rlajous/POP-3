@@ -1,0 +1,97 @@
+Delivered-To: sebastianfavaron@gmail.com
+Received: by 2002:ad5:5cc7:0:0:0:0:0 with SMTP id v7-v6csp2592419imu;
+        Sun, 28 Oct 2018 03:54:09 -0700 (PDT)
+X-Received: by 2002:a9d:7495:: with SMTP id t21mr6351674otk.93.1540724049632;
+        Sun, 28 Oct 2018 03:54:09 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1540724049; cv=none;
+        d=google.com; s=arc-20160816;
+        b=yyTImI/cadhPu0FUxd4Imf0+/3/0BMHovXQpzkVZJqcVucXh1mzeLeOm6aln9Q7gCg
+         x/YgZhaINE+7Vc4Yj81wFiQlN96A2cNgobY+dsdWUr/BjFxcsVOFlNMssqeJhavpMikz
+         KWGz/moS/W7Z1M0CPzSL19VsBWM9WIkQgIpJcOrKQXEet1o83tOITchHJ07h6DSMHxy2
+         wpIKWEODpJItcZGEnMyUscdRqBCI/kq9feWGMqEU5J70HtrqUwzAkxB4APvAmOtBmbN/
+         iIhgm3eRvLr0T7m7o6ARFLru52RnVIr/Ltw/krVY5Nkk0w0AUpOZ4DqKXVNY06PNBzOC
+         D5qQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=cc:to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=yu5+8ZfjBg6vWI28LI6wk5ZOjN+UwJwtduQPuI7BLwg=;
+        b=0RbtPhwrhatmkurJ4FEl+FBFRGl2PpeYhUyqgbYbHcigJ8S5wJwu8bI8iyAx2TT7te
+         L7WG7dW+cv4x9YoJ+2gPcRmsfqtQ17AAJDxAhk5fA99lOPYiQZviyDHKtwK2e87cBo9v
+         BcmaqfgLFX3bPLZ9S+0ovZtZm6JNQXfNNA7F0yuXXtHxrKWXhkw0HFn0Vdxiz7q/LYMq
+         3OJ0y1mnm+5Ixc65CpK/VdfWSeEwWft0cRr+1+eRr1xI/8ddsPzx1BPO03QKbfNv38VU
+         xgnO37WMDBLDz/G6cMCwEWAgf+nN2F+tmvJO8dUAv7N+qrCkbS34OZwNjyEtZFE4+UwO
+         hrvQ==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b="RtI+/5/U";
+       spf=pass (google.com: domain of andinismocuba@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=andinismocuba@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+Return-Path: <andinismocuba@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id d93sor393074otb.113.2018.10.28.03.54.09
+        (Google Transport Security);
+        Sun, 28 Oct 2018 03:54:09 -0700 (PDT)
+Received-SPF: pass (google.com: domain of andinismocuba@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b="RtI+/5/U";
+       spf=pass (google.com: domain of andinismocuba@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=andinismocuba@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:from:date:message-id:subject:to:cc;
+        bh=yu5+8ZfjBg6vWI28LI6wk5ZOjN+UwJwtduQPuI7BLwg=;
+        b=RtI+/5/UaQvp9YIYiEiFwy3+PjVFnG+teQQTDpnwKOIscwcaVCUrfPuiv8boY0fApU
+         UlV/sk79A3SdAt+nRzygBt8fA2ZL3TH7s/ZisiHvCPUZDxcL4pmNKjGq75L9xLTCAGso
+         O4dO1UX8/8BkVQylNM0yUE8jCk2Em5WOgbTcem0+90vh2KqBtUC4KJtt8o4LRnluTUE2
+         4PE0u7SyYtIjzckQeCuSW7/6zJi1hDhjD9oI+n3sNeASJoCVMR1sc1hBEj32qhhDMx9F
+         dv+6A62tVFdrX6V//hhn26RnhPXjeR4Qdw6+9y06h/dxpYFyOxfabvn6re+/EEvQjtl6
+         7mlA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to:cc;
+        bh=yu5+8ZfjBg6vWI28LI6wk5ZOjN+UwJwtduQPuI7BLwg=;
+        b=oem35wrnnRsXkem+myUz98LgRFfiAC2rBgfAvOBjyiWJCeU3h1dQ9fmsvFqqcBMKS2
+         GJ/Z5ClB9ijcxyx2NcMbHimpFmgYpaiQ4L8K7jUd4lP+4V5MSKYVOWYCeeveti9TNVQe
+         rONZ1DbAU+ilEIVQP5xR2jusJ5uCHjITyvkIeGpzH0ePq3tAqwt3EVo6BIHWavZrU8bm
+         H9hKKGCjHEG88SJ2AdYrRy9jWJZyBt965daSoD9SsRZNN825KHLYpEohpHUrGMerEEdQ
+         6F02dmTAPjsAy1JBrF5PFHUSeQpIvH89WTwAiQBIqIxCp9vvNNSZDMt3P2TEyWRqyHng
+         mTiA==
+X-Gm-Message-State: AGRZ1gII/zvKz9Rqc6atWkpuRyhHJLTocUHsdjG7Weq+xJTdnOY83iil 91vKmd7kW+JXbur22wxECwHYjIu5evxBLRuMtEOYog==
+X-Google-Smtp-Source: AJdET5fNvSaji26v2vTfl4ENHmUMmgO592zGdgB0oJ9PpHy2cbbAopcoOXQK3p35mdzUL32ptVpVHVwsDrXJ0VX/TRQ=
+X-Received: by 2002:a9d:4001:: with SMTP id m1mr6338420ote.24.1540724048865; Sun, 28 Oct 2018 03:54:08 -0700 (PDT)
+MIME-Version: 1.0
+From: ANDINISMO CUBA <andinismocuba@gmail.com>
+Date: Sun, 28 Oct 2018 07:53:56 -0300
+Message-ID: <CANyg1zFVimuhqgC8vJ9mNkViL+032dUOf0ykt8sgRpuGfuBi+g@mail.gmail.com>
+Subject: Curso de escalada de noviembre 2018
+To: sebastianfavaron@gmail.com, m67tomas@yahoo.com.ar, Lucas Demaria <demarialucas@gmail.com>, cauzqueda@gmail.com, vgomeznardo@gmail.com, eugejaworski@gmail.com
+Cc: ESCUELA ESCALADA CUBA <escaladacuba@gmail.com>, Faustino Garcia Teran <faustino.garcia.teran@gmail.com>, Juan Borda Rojas <juanbordarojas@gmail.com>
+Content-Type: multipart/alternative; boundary="000000000000a132bf057947c5ce"
+
+--000000000000a132bf057947c5ce
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+textplain:Bienvenidos al curso de escalada. Excepto por Tom=C3=A1s entiendo que todos
+est=C3=A1n confirmados.
+Todos empiezan el s=C3=A1bado pr=C3=B3ximo a las 15.30.
+Lucas y Toia descarto q como esquiadores que son van a descontar en el
+curso.
+El primer s=C3=A1bado hay una parte te=C3=B3rica asique traigan para anotar=
+.
+En estos d=C3=ADas se les mandar=C3=A1 el mail
+Slds
+Facundo
+
+--000000000000a132bf057947c5ce
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto">html:Bienvenidos al curso de escalada. Excepto por Tom=C3=A1s =
+entiendo que todos est=C3=A1n confirmados.<div dir=3D"auto">Todos empiezan =
+el s=C3=A1bado pr=C3=B3ximo a las 15.30.</div><div dir=3D"auto">Lucas y Toi=
+a descarto q como esquiadores que son van a descontar en el curso.</div><di=
+v dir=3D"auto">El primer s=C3=A1bado hay una parte te=C3=B3rica asique trai=
+gan para anotar.</div><div dir=3D"auto">En estos d=C3=ADas se les mandar=C3=
+=A1 el mail</div><div dir=3D"auto">Slds</div><div dir=3D"auto">Facundo</div=
+></div>
+
+--000000000000a132bf057947c5ce--
