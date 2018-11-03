@@ -140,7 +140,10 @@ int handleHistoricAccess(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Historic acces");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Historic accesses: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -159,7 +162,10 @@ int handleActiveTransformation(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Transformation activated");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Active transformation: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -167,7 +173,7 @@ int handleActiveTransformation(int connSock) {
 }
 
 int handleBufferSize(int connSock) {
-    uint8_t arg_size;
+    uint8_t arg_size = 0;
     int exit = 1;
     uint8_t command = 0x06, nargs = 1;
     int ret;
@@ -188,12 +194,12 @@ int handleBufferSize(int connSock) {
             memcpy(datagram + 3, buffer, arg_size);
         }
     }
-    ret = sctp_sendmsg(connSock, (const void *) datagram, 2,
+    ret = sctp_sendmsg(connSock, (const void *) datagram, arg_size + 3,
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0x00) {
-        printf("Buffer size set");
+        printf("Buffer size set \n");
     } else {
         printError(res[0]);
     }
@@ -202,7 +208,7 @@ int handleBufferSize(int connSock) {
 
 int handleTransformationChange(int connSock) {
     int exit = 1;
-    uint8_t command = 0x0, nargs = 1;
+    uint8_t command = 0x00, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
