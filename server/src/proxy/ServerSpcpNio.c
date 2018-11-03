@@ -602,7 +602,7 @@ spcp_request_process(struct selector_key *key) {
             ret = set_transformation(&spcp->write_buffer, request, &spcp->status);
             break;
         case spcp_quit:
-            ret = do_quit(&spcp->write_buffer);
+            ret = DONE;
             break;
         default:
             spcp->status = spcp_invalid_command;
