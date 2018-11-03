@@ -82,8 +82,8 @@ int handlePassword(char *password, int connSock) {
     }
 }
 
-int handleConcurrentConection(int connSock) {
-    uint8_t command = 2, nargs = 0;
+int getConcurrentConnections(int connSock) {
+    uint8_t command = 0x02, nargs = 0;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
@@ -94,7 +94,8 @@ int handleConcurrentConection(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Concurrent connections set");
+        char data[res[1] +1 ];
+        memcpy(data, res + 2, res[0]);
     } else {
         printError(res[0]);
     }
