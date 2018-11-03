@@ -53,6 +53,9 @@ parse_request_cmd(struct spcp_request_parser *p, const uint8_t c) {
 static enum spcp_request_state
 parse_request_nargs(struct spcp_request_parser *p, const uint8_t c) {
     remaining_args_set(p, c);
+    if(remaining_args_is_done(p)){
+       return spcp_request_done;
+    }
     return spcp_request_arg_size;
 }
 
@@ -155,17 +158,16 @@ extern int
 spcp_data_request_marshall(buffer *b, uint8_t status, char *data, size_t data_len){
     uint8_t *ptr;
     size_t  count;
-
     ptr = buffer_write_ptr(b, &count);
-    if(count < sizeof(data) + 2)
+    if(count < data_len + 2)
         return -1;
 
     buffer_write(b, status);
     buffer_write(b, (uint8_t)data_len);
-    memcpy(ptr, (uint8_t *)&data, data_len);
-    buffer_write_adv(b, data_len);
+    memcpy(ptr + 2, data, data_len);
+    buffer_write_adv(b, data_len + 2);
 
-    return sizeof(data) + 2;
+    return data_len + 2;
 }
 
 extern int

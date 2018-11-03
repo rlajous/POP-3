@@ -94,8 +94,10 @@ int getConcurrentConnections(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        char data[res[1] +1 ];
-        memcpy(data, res + 2, res[0]);
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Concurrent connections: %s \n", data);
     } else {
         printError(res[0]);
     }
