@@ -258,7 +258,7 @@ user_process(struct selector_key *key) {
     }
 
     memcpy(spcp->username, spcp->parser.request.arg0, spcp->parser.request.arg0_size);
-    spcp->username[spcp->parser.request.arg0_size + 1] = '\0';
+    spcp->username[spcp->parser.request.arg0_size] = '\0';
 
     if(user_present(spcp->username)) {
         if (-1 == spcp_no_data_request_marshall(&spcp->write_buffer, 0x00)) {
@@ -357,7 +357,7 @@ pass_process(struct selector_key *key) {
 
     char pass[spcp->parser.request.arg0_size + 1];
     memcpy(pass, spcp->parser.request.arg0, spcp->parser.request.arg0_size);
-    pass[spcp->parser.request.arg0_size + 1] = '\0';
+    pass[spcp->parser.request.arg0_size] = '\0';
 
     if(validate_user(spcp->username, pass)) {
         spcp->status = spcp_success;
@@ -463,7 +463,7 @@ get_concurrent_connections(struct buffer *b,  enum spcp_response_status *status)
     sprintf(serialized_data, "%d", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data))) {
         return ERROR;
     }
         return REQUEST_WRITE;
@@ -483,7 +483,7 @@ get_transfered_bytes(struct buffer *b,  enum spcp_response_status *status) {
     sprintf(serialized_data, "%llu", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data))) {
         return ERROR;
     }
     return REQUEST_WRITE;
@@ -503,7 +503,7 @@ get_historical_accesses(struct buffer *b, enum spcp_response_status *status) {
     sprintf(serialized_data, "%lu", data);
 
     *status = spcp_success;
-    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data) - 1)) {
+    if( -1 == spcp_data_request_marshall(b, 0x00, serialized_data, strlen(serialized_data))) {
         return ERROR;
     }
     return REQUEST_WRITE;
@@ -513,7 +513,7 @@ static unsigned
 get_active_transformation(struct buffer *b, enum spcp_response_status *status) {
 
     if(proxyArguments->command != NULL) {
-        if( -1 == spcp_data_request_marshall(b, 0x00, proxyArguments->command, strlen(proxyArguments->command) -1 )) {
+        if( -1 == spcp_data_request_marshall(b, 0x00, proxyArguments->command, strlen(proxyArguments->command))) {
             return ERROR;
         }
     } else {

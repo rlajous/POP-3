@@ -107,7 +107,7 @@ init_default_string(const char * string) {
   return aux;
 }
 
-static char *
+extern char *
 modify_string(char * old_string, const char * new_string) {
   size_t size = strlen(new_string);
   char  *aux  = realloc(old_string, size +1);

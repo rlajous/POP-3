@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
     sscanf(buffer, "%s %s %s", first, second, third);
     if (strcmp(first, "1") == 0)
     {
+      printf("Enter username \n");
       int flag = 1;
       while (flag != 0)
       {
@@ -137,16 +138,13 @@ int main(int argc, char *argv[])
         }
       }
       printf(" Enter Password \n");
-      flag = 1;
-      while (flag != 0)
+      int success = 1;
+      while (success != 0)
       {
         if (fgets(buffer, sizeof(buffer), stdin) != NULL)
         {
-          sscanf(buffer, "%s %s %s", first, second, third);
-          flag = handlePassword(first, connSock);
-          if (first != 0)
-          {
-          }
+          sscanf(buffer, "%s", first);
+          success = handlePassword(first, connSock);
         }
         else
         {
@@ -156,9 +154,9 @@ int main(int argc, char *argv[])
       handleHelp();
       while (exit != 0)
       {
-        if (fgets((char *)buffer, 1, stdin) == NULL)
+        if (fgets((char *)buffer, sizeof(buffer), stdin) == NULL)
         {
-          printf(" No characters read, for more help enter number 0\n");
+          printf(" No characters read, for more help enter number 0 \n");
         }
         else
         {
@@ -166,35 +164,35 @@ int main(int argc, char *argv[])
           option = strtoul(buffer, NULL, 10);
           switch (option)
           {
-          case '0':
+          case 0:
             handleHelp();
             break;
-          case '1':
+          case 1:
             handleConcurrentConection(connSock);
             break;
-          case '2':
+          case 2:
             handleTransferedBytes(connSock);
             break;
-          case '3':
+          case 3:
             handleHistoricAccess(connSock);
             break;
-          case '4':
+          case 4:
             handleActiveTransformation(connSock);
             break;
-          case '5':
+          case 5:
             handleBufferSize(connSock);
             break;
-          case '6':
+          case 6:
             handleTransformationChange(connSock);
             break;
-          case '7':
+          case 7:
             handleTimeOut(connSock);
             break;
-          case '8':
+          case 8:
             exit = handleQuit(connSock);
             break;
           default:
-            printf("Invalid option, for help enter 0");
+            printf("Invalid option, for help enter 0 \n");
           }
         }
       }

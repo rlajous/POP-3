@@ -19,17 +19,17 @@
 void printError(uint8_t error_code) {
     switch (error_code) {
         case 0x01:
-            printf("Authentication error");
+            printf("Authentication error \n");
             break;
         case 0x02:
-            printf("Invalid command");
+            printf("Invalid command \n");
             break;
         case 0x03:
-            printf("Invalid arguments");
+            printf("Invalid arguments \n");
             break;
         case 0x04:
         default:
-            printf("Error");
+            printf("Error \n");
     }
 }
 
@@ -42,7 +42,7 @@ int handleUser(char *user, int connSock) {
 
     datagram[0] = command;
     datagram[1] = nargs;
-    size_t length = strlen(user) - 1;
+    size_t length = strlen(user);
     datagram[2] = length;
     memcpy(datagram + 3, user, length);
 
@@ -51,12 +51,11 @@ int handleUser(char *user, int connSock) {
 
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
-    if (res[0] == 0) {
-        printf("user set");
-    } else {
-        printError(res[0]);
+    if (res[0] != 0)  {
+        printf("Invalid username \n");
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 int handlePassword(char *password, int connSock) {
@@ -67,17 +66,19 @@ int handlePassword(char *password, int connSock) {
 
     datagram[0] = command;
     datagram[1] = nargs;
-    size_t length = strlen(password) - 1;
+    size_t length = strlen(password);
     datagram[2] = length;
-    datagram[3] = password;
-    ret = sctp_sendmsg(connSock, (const void *) datagram, 3 + length / 2,
+    memcpy(datagram + 3, password, length);
+    ret = sctp_sendmsg(connSock, (const void *) datagram, 3 + length,
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("password succes");
+        printf("Login successful \n");
+        return 0;
     } else {
-        printError(res[0]);
+        printf("Invalid password, please try again. \n");
+        return 1;
     }
 }
 
@@ -257,9 +258,9 @@ int handleTimeOut(int connSock) {
 int handleHelp() {
     printf("\nThese are the following commands: \n");
     printf("0 -> Help\n\n");
-    printf("1 -> Concurrent Conection\n\n");
-    printf("2 -> Transfered Byte\n\n");
-    printf("3 -> History Acces\n\n");
+    printf("1 -> Concurrent Connections\n\n");
+    printf("2 -> Transferred Byte\n\n");
+    printf("3 -> Historical Accesses\n\n");
     printf("4 -> Get Transformation\n");
     printf("5 -> Set buffer Size\n");
     printf("6 -> Set transformation\n");
