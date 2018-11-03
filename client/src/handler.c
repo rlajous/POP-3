@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 void printError(uint8_t error_code) {
     switch (error_code) {
@@ -34,7 +35,7 @@ void printError(uint8_t error_code) {
 }
 
 
-int handleUser(char *user, int connSock) {
+bool handleUser(char *user, int connSock) {
     uint8_t command = 0, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -53,12 +54,12 @@ int handleUser(char *user, int connSock) {
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] != 0)  {
         printf("Invalid username \n");
-        return 1;
+        return false;
     }
-    return 0;
+    return true;
 }
 
-int handlePassword(char *password, int connSock) {
+bool handlePassword(char *password, int connSock) {
     uint8_t command = 1, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -75,10 +76,10 @@ int handlePassword(char *password, int connSock) {
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
         printf("Login successful \n");
-        return 0;
+        return true;
     } else {
         printf("Invalid password, please try again. \n");
-        return 1;
+        return false;
     }
 }
 

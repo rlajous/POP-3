@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include "common.h"
 #include <netinet/sctp.h>
+#include <stdbool.h>
 #include "handler.h"
 
 #define PROXY_SCTP_PORT 9090
@@ -123,34 +124,40 @@ int main(int argc, char *argv[])
     sscanf(buffer, "%s %s %s", first, second, third);
     if (strcmp(first, "1") == 0)
     {
-      printf("Enter username \n");
-      int flag = 1;
-      while (flag != 0)
-      {
-        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
-        {
-          sscanf(buffer, "%s %s %s", first, second, third);
-          flag = handleUser(first, connSock);
+      int userLogged = false;
+      int readUser = true, readPass = true, success;
+      while(!userLogged) {
+        printf("Enter username \n");
+        while (readUser) {
+          readPass = true;
+          if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+            sscanf(buffer, "%s %s %s", first, second, third);
+            success = handleUser(first, connSock);
+          } else {
+            printf(" No characters read \n");
+          }
+          if (success) {
+            readUser = false;
+          }
         }
-        else
-        {
-          printf(" No characters read \n");
+        printf(" Enter Password \n");
+        while (readPass) {
+          if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+            sscanf(buffer, "%s", first);
+            success = handlePassword(first, connSock);
+          } else {
+            printf(" No characters read \n");
+          }
+          if (success) {
+            userLogged = true;
+            readPass = false;
+          } else {
+            readPass = false;
+            readUser = true;
+          }
         }
       }
-      printf(" Enter Password \n");
-      int success = 1;
-      while (success != 0)
-      {
-        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
-        {
-          sscanf(buffer, "%s", first);
-          success = handlePassword(first, connSock);
-        }
-        else
-        {
-          printf(" No characters read \n");
-        }
-      }
+
       handleHelp();
       while (exit != 0)
       {
