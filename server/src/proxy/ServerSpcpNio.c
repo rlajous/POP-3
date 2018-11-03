@@ -608,7 +608,9 @@ spcp_request_process(struct selector_key *key) {
     if(ret == ERROR){
         spcp->status = spcp_err;
     }
-    spcp_compute_interests(key->s, key);
+    if(SELECTOR_SUCCESS != selector_set_interest_key(key, OP_WRITE)) {
+        return ERROR;
+    }
     return ret;
 }
 
