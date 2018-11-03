@@ -14,6 +14,7 @@ detect_status(struct response_parser *p, const uint8_t c) {
         p->pop3_response_success = true;
     } else if (c == '-') {
         p->pop3_response_success = false;
+        p->request->multi = false;
     }
     return response_byte;
 }
