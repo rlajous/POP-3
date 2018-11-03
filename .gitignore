@@ -1,10 +1,19 @@
-src/cmake-build-debug/
 \.idea/
-src/proxyPop
-src/Makefile
-src/CMakeFiles/
-src/CMakeCache.txt
-src/cmake_install.cmake
+server/src/cmake-build-debug/
+server/src/proxyPop
+server/src/Makefile
+server/src/CMakeFiles/
+server/src/CMakeCache.txt
+server/src/cmake_install.cmake
+
+client/src/cmake-build-debug/
+client/src/spcpClient
+client/src/Makefile
+client/src/CMakeFiles/
+client/src/CMakeCache.txt
+client/src/cmake_install.cmake
+
+
 cmake-build-debug/
 
 CMakeLists\.txt
