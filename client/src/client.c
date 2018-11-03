@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
   struct sctp_sndrcvinfo sndrcvinfo;
   struct sctp_event_subscribe events;
   struct sctp_initmsg initmsg;
-  uint8_t buffer[MAX_BUFFER + 1];
+  char buffer[MAX_BUFFER + 1];
 
   clean(buffer);
   position = 0;
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
         if (fgets(buffer, sizeof(buffer), stdin) != NULL)
         {
           sscanf(buffer, "%s %s %s", first, second, third);
-          flag = handlePassword(first);
+          flag = handlePassword(first, connSock);
           if (first != 0)
           {
           }
@@ -156,17 +156,18 @@ int main(int argc, char *argv[])
       handleHelp();
       while (exit != 0)
       {
-        if (fgets((char *)buffer, sizeof(buffer), stdin) == NULL)
+        if (fgets((char *)buffer, 1, stdin) == NULL)
         {
           printf(" No characters read, for more help enter number 0\n");
         }
         else
         {
-          sscanf(buffer, "%s ", first);
-          switch (first)
+          uint64_t option;
+          option = strtoul(buffer, NULL, 10);
+          switch (option)
           {
           case '0':
-            handleHelp(connSock);
+            handleHelp();
             break;
           case '1':
             handleConcurrentConection(connSock);
@@ -192,6 +193,8 @@ int main(int argc, char *argv[])
           case '8':
             exit = handleQuit(connSock);
             break;
+          default:
+            printf("Invalid option, for help enter 0");
           }
         }
       }
