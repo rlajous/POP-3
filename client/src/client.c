@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
             getConcurrentConnections(connSock);
             break;
           case 2:
-            handleTransferedBytes(connSock);
+            handleTransferredBytes(connSock);
             break;
           case 3:
             handleHistoricAccess(connSock);

@@ -104,7 +104,7 @@ int getConcurrentConnections(int connSock) {
     return 1;
 }
 
-int handleTransferedBytes(int connSock) {
+int handleTransferredBytes(int connSock) {
     uint8_t command = 3, nargs = 0;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -115,8 +115,12 @@ int handleTransferedBytes(int connSock) {
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
+
     if (res[0] == 0) {
-        printf("Bytes transferred");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Bytes transfered: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -260,10 +264,10 @@ int handleTimeOut(int connSock) {
 
 int handleHelp() {
     printf("\nThese are the following commands: \n");
-    printf("0 -> Help\n\n");
-    printf("1 -> Concurrent Connections\n\n");
-    printf("2 -> Transferred Byte\n\n");
-    printf("3 -> Historical Accesses\n\n");
+    printf("0 -> Help\n");
+    printf("1 -> Concurrent Connections\n");
+    printf("2 -> Transferred Bytes\n");
+    printf("3 -> Historical Accesses\n");
     printf("4 -> Get Transformation\n");
     printf("5 -> Set buffer Size\n");
     printf("6 -> Set transformation\n");

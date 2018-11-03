@@ -4,7 +4,7 @@ int handleUser(char *user, int connSock);
 
 int handlePassword(char *password, int connSock);
 
-int handleTransferedBytes(int connSock);
+int handleTransferredBytes(int connSock);
 
 int getConcurrentConnections(int connSock);
 
