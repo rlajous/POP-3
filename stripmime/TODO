@@ -3,5 +3,4 @@ Corregir: el \r\n.\r\n en body termina el parseo
 //TODO: redefinir el parser boundary_border
 //TODO: ver que hacer con los unexpected
 //TODO: sacar los "escribir" de los events cuando termine el stripmime
-//TODO: sacar los colores de los printf's
 //TODO: documentar que no contemplamos content-transfer-encoding antes de content-type (que haria el mensaje de reemplazo ilegible acualmente)

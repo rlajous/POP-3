@@ -34,22 +34,275 @@
     </abstract>
   </front>
   <middle>
-    <section anchor="intro" title="Introducción">
-      <t>
-
-        <!--<list style="numbers">-->
-          <!--<t>The first item.</t>-->
-          <!--<t>The second item, which contains two bulleted sub-items:-->
-            <!--<list style="symbols">-->
-              <!--<t>The first sub-item.</t>-->
-              <!--<t>The second sub-item.</t>-->
-            <!--</list>-->
-          <!--</t>-->
-        <!--</list>-->
-      </t>
+    <section title="Aplicaciones y protocolos desarrollados">
+      <section title="El protocolo SPCP">
+        <section title="introducción al protocolo">
+          <t>El Simple Proxy Communication Protocol(SPCP) es un protocolo binario utilizado para poder
+            configurar y obtener métricas de un servidor proxy. En el diseño del protocolo se priorizo
+            la simpleza asi permitiendo que sea implementado lo mas fácilmente posible siempre y cuando
+            no comprometa el objetivo principal de administrar el proxy
+          </t>
+        </section>
+        <section title="Operación Básica">
+          <t>Inicialmente, el servidor spcp inicializa su servicio escuchando en el puerto 9090 por default
+            para aceptar conexiones sctp entrantes. Cuando el cliente desea utilizar el servicio este debe
+            establecer una conexión sctp con el servidor.
+          </t>
+          <t>Una vez establecida la conexión se procede a la etapa de autenticación, el cliente manda su
+            usuario y su contraseña y estos son validados por el servidor. Una vez autenticado se procede al
+            estado de transacción en donde se mandan requests tanto para modificar el estado del proxy como
+            para obtener métricas del mismo recibiendo para cada uno una respuesta con la informacion en el
+            caso de que se haya podido obtener, o un estado de error apropiado. Finalmente se envía un request
+            de terminación en donde se le indica al servidor que el cliente desea finalizar su sesión y el
+            servidor da por finalizada la sesión.
+          </t>
+        </section>
+        <section title="El request">
+          <figure>
+            <preamble>La estructura de un request</preamble>
+            <artwork>
+  +-----+-------+----------+----------+...+----------+----------+
+  | CMD | NARGS | ARGLEN 1 |  ARG 1   |   | ARGLEN N |   ARG N  |
+  +-----+-------+----------+----------+...+----------+----------+
+  |  1  |   1   |    1     | Variable |   |    1     | Variable |
+  +-----+-------+----------+----------+...+----------+----------+
+            </artwork>
+          </figure>
+          <t>El request se compone por un numero variable de segmentos, estos son:
+            <list>
+              <t>CMD: El identificador de comando, tiene un tamaño de un byte.
+              </t>
+              <t>NARGS: La cantidad de argumentos, tiene tamaño de un byte.
+              </t>
+              <t>ARGLEN: Cada argumento se encuentra precedido por el largo del mismo, este tiene un maximo
+                 de 255 ya que este campo tiene un byte de longitud.
+              </t>
+              <t>ARG: El argumento de tamaño anteriormente especificado, los argumentos son representaciones
+                ASCII.
+              </t>
+            </list>
+          </t>
+        </section>
+        <section title="La Response">
+          <figure>
+            <preamble>La estructura de un response</preamble>
+            <artwork>
+  +-------------+---------+----------+
+  | STATUS_CODE | DATALEN |   DATA   |
+  +-------------+---------+----------+
+  |      1      |    1    | Variable |
+  +-------------+---------+----------+
+            </artwork>
+          </figure>
+          <t>El response se compone por un numero variable de segmentos, estos son:
+            <list>
+              <t>STATUS_CODE: Identifica el codigo de la respuesta.
+              </t>
+              <t>DATALEN: La longitud de los datos de la respuesta del servidor.
+              </t>
+              <t>DATA: Los datos enviados por el servidor, estos se encuentran en codificación ASCII.
+              </t>
+            </list>
+          </t>
+          <section title="Codigos de respuesta">
+            <t>Discutimos brevemente los posibles codigos de respuesta que un servidor puede enviar a un cliente
+            </t>
+            <t>
+              <list>
+                <t>0x00: es el response de OK, indica que el request se ejecuto con exito por parte del servidor.
+                </t>
+                <t>0x01: Error de autenticación, indica que hubo un error al tratar de autenticar el usuario.
+                </t>
+                <t>0x02: Comando invalido, el comando que se envio en el request no es un comando valido.
+                </t>
+                <t>0x03: Argumentos invalidoos, indica que los argumentos para el comando no son validos.
+                </t>
+                <t>0x04: Error general, es el error de fallback del servidor cuando no puede especificar
+                  por que fallo.
+                </t>
+              </list>
+            </t>
+          </section>
+        </section>
+        <section title="Estado de autenticación">
+          <t>Una vez inicializada la conexión el servidor se encuentra en el estado de autenticación. El cliente
+          debe proveer su usuario mediante el comando 0x00, al cual llamaremos USER.
+          </t>
+          <t>El comando USER se compone de la siguiente manera:
+            <list>
+              <t>Argumentos: uno, la representación ASCII del nombre de usuario.
+              </t>
+              <t>Restricciones: Solo se puede utilizar en el estado de autenticación una vez inicializada la conexión
+                 o inmediatamente despues de un USER o PASS erróneo.
+              </t>
+              <t>Discusión: Primero se debe mandar el comando USER, si el usuario esta registrado entonces el servidor
+                responde con una respuesta positiva mandando el byte 0x00. En caso contrario respondera con un 0x01
+                (AUTH ERROR)
+              </t>
+            </list>
+          </t>
+          <t>Inmediatamente despues del comando USER debe proveer mediante otro request la contraseña asociada al
+            usuario. Para esto emite un request al servidor con el comando 0x01, al cual le llamaremos PASS de
+            ahora en adelante.
+          </t>
+          <t>El comando PASS se compone de la siguiente manera:
+            <list>
+              <t>Argumentos: uno, la representación ASCII de la contraseña.
+              </t>
+              <t>Restricciones: Solo se puede utilizar en el estado de autenticación una vez inicializada la conexión
+                e inmediatamente después de un USER.
+              </t>
+            </list>
+          </t>
+        </section>
+        <section title="Estado de transacción">
+          <t>Ya habiendo sido autenticado el servidor procede al estado de transacción, en este estado se podra
+             consular el estado del proxy como también alterarlo. Para esto se usan distintos comandos que
+             procederemos a describir:
+          </t>
+          <t>0x02, conexiones concurrentes:
+            <list>
+              <t>Argumentos: ninguno
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando obtiene la representación ASCII de la cantidad de conexiones al servidor
+                que se encuentran establecidas al momento de procesarse el request. En el cazo de que el servidor
+                no pueda responder satisfactoriamente al request este responderá con un estado de error apropiado.
+              </t>
+            </list>
+          </t>
+          <t>0x03, bytes transferidos:
+            <list>
+              <t>Argumentos: ninguno.
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando obtiene como respuesta positiva la representación ASCII de la cantidad de
+                 bytes que fueron transferidos desde que el servidor arranco. En el cazo de que el servidor no pueda
+                responder satisfactoriamente al request este responderá con un estado de error apropiado.
+              </t>
+            </list>
+          </t>
+          <t>0x04, Accesos históricos:
+            <list>
+              <t>Argumentos: ninguno.
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando obtiene como respuesta positiva el número de accesos que hubieron al servidor
+                 desde que se inicializo. En el cazo de que el servidor no pueda responder satisfactoriamente al request
+                este responderá con un estado de error apropiado.
+              </t>
+            </list>
+          </t>
+          <t>0x05, Transformación activa:
+            <list>
+              <t>Argumentos: ninguno.
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando obtiene como respuesta la representación ASCII del programa de transformación
+                que esta ejecutando el servidor. En el caso de no tener ningún programa de transformación se recibe
+                una respuesta positiva sin ningún dato. Si por alguna razón no se pudo devolver la transformación
+                activa entonces se devuelve un código de error apropiado como se especifico anterior mente
+              </t>
+            </list>
+          </t>
+          <t>0x06, Modificar el tamaño de los buffers:
+            <list>
+              <t>Argumentos: uno, la representación ASCII en decimal del nuevo tamaño para los buffers.
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando cambia el tamaño que se le asignan a los buffers al momento de inciializar
+                una nueva conexion al servidor. Si se pudo realizar el cambio con éxito entonces se obtiene como
+                respuesta 0x00 (OK). En caso contrario se obtiene una respuesta con el error apropiado como se
+                especifico anteriormente.
+              </t>
+            </list>
+          </t>
+          <t>0x07, Cambio de transformación:
+            <list>
+              <t>Argumentos: uno, la representación ASCII del nuevo comando de transformación.
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: El comando cambia la transformación a realizar. En el caso de querer desactivar
+                las transformaciones simplemente se envía el comando de cambio de transformación sin datos.
+                El servidor responde de manera positiva (0x00) cuando pudo cambiar con éxito las
+                transformaciones, caso contrario responde con un error apropiado.
+              </t>
+            </list>
+          </t>
+          <t>0x09, Terminación de la sesión:
+            <list>
+              <t>Argumentos: ninguno
+              </t>
+              <t>Restricciones: Solo puede ser utilizado en el estado de transacción.
+              </t>
+              <t>Discusión: Cuando se envia un request con este comando se le avisa al servidor que el cliente
+                 desea finalizar la sesión, el servidor responde de manera exitosa y termina la conexión.
+              </t>
+            </list>
+          </t>
+        </section>
+        <section title="Limitaciones del protocolo">
+          <t>El protocolo, dada su simpleza, posee varias limitaciones y las discutimos a continuación
+          </t>
+          <section title="Tamaño de los argumentos">
+            <t>El protocolo posee un byte para indicar el tamaño del argumento, por lo que permite solamente
+               argumentos de como maximo 255 bytes, esto no limita de manera sustancial el cambio del tamaño
+               de los buffers ya que resultaría excesivo un buffer con un tamaño superior a 10^255 bytes.
+               en cambio limita considerablemente la posibilidad de las transformaciones a realizar ya que
+               la transformación debe ser un comando con una longitud máxima de 255 caracteres.
+            </t>
+          </section>
+        </section>
+      </section>
     </section>
-    <section title="Prtocolo SPCP">
-      <section title=""
+    <section title="Problemas encontrados">
+      <section title="Piplinging con servidor de origen no pipeliner">
+
+      </section>
+      <section title="Detección y transformación de mensajes">
+
+      </section>
+    </section>
+    <section title="Limitaciones">
+      <section title="modificación del tamaño de los buffers">
+        <t>se modifican los de las nuevas conexiones a partir del cambio, no dinamicamente las conexiones
+           ya existentes</t>
+      </section>
+      <section title="modificación de content-transfer-encoding">
+        <t>Si se debe reemplazar el content type y el header content-transfer-encoding se encuentra antes
+          del header content-type entonces no se reemplaza por text/plain y el mensaje de reemplazo queda
+          ilegible.
+        </t>
+      </section>
+    </section>
+    <section title="Posibles extensiones">
+      <section title="Agregado de timeouts">
+        <t>Resultaría útil terminar una conexión que permaneció inactiva por mas de una determinada cantidad
+           de tiempo, así se podría mejorar la performance del proxy ya que se irian purgando las conexiones
+           inactivas
+        </t>
+      </section>
+    </section>
+    <section title="conclusiones">
+      
+    </section>
+    <section title="ejemplos de pruba">
+      
+    </section>
+    <section title="Guía de instalación">
+      
+    </section>
+    <section title="Instrucciones para la configuración">
+      
+    </section>
+    <section title="Ejemplos de configuración y monitoreo">
+
     </section>
   </middle>
   <back>

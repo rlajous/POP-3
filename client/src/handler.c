@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 void printError(uint8_t error_code) {
     switch (error_code) {
@@ -34,7 +35,7 @@ void printError(uint8_t error_code) {
 }
 
 
-int handleUser(char *user, int connSock) {
+bool handleUser(char *user, int connSock) {
     uint8_t command = 0, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -53,12 +54,12 @@ int handleUser(char *user, int connSock) {
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] != 0)  {
         printf("Invalid username \n");
-        return 1;
+        return false;
     }
-    return 0;
+    return true;
 }
 
-int handlePassword(char *password, int connSock) {
+bool handlePassword(char *password, int connSock) {
     uint8_t command = 1, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -75,15 +76,15 @@ int handlePassword(char *password, int connSock) {
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
         printf("Login successful \n");
-        return 0;
+        return true;
     } else {
         printf("Invalid password, please try again. \n");
-        return 1;
+        return false;
     }
 }
 
-int handleConcurrentConection(int connSock) {
-    uint8_t command = 2, nargs = 0;
+int getConcurrentConnections(int connSock) {
+    uint8_t command = 0x02, nargs = 0;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
@@ -94,14 +95,17 @@ int handleConcurrentConection(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Concurrent connections set");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Concurrent connections: %s \n", data);
     } else {
         printError(res[0]);
     }
     return 1;
 }
 
-int handleTransferedBytes(int connSock) {
+int handleTransferredBytes(int connSock) {
     uint8_t command = 3, nargs = 0;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
@@ -112,8 +116,12 @@ int handleTransferedBytes(int connSock) {
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
+
     if (res[0] == 0) {
-        printf("Bytes transferred");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Bytes transfered: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -132,7 +140,10 @@ int handleHistoricAccess(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Historic acces");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Historic accesses: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -151,7 +162,10 @@ int handleActiveTransformation(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("Transformation activated");
+        char data[res[1] + 1];
+        memcpy(data, res + 2, res[1]);
+        data[res[1]] = '\0';
+        printf("Active transformation: %s \n", data);
     } else {
         printError(res[0]);
     }
@@ -159,7 +173,7 @@ int handleActiveTransformation(int connSock) {
 }
 
 int handleBufferSize(int connSock) {
-    uint8_t arg_size;
+    uint8_t arg_size = 0;
     int exit = 1;
     uint8_t command = 0x06, nargs = 1;
     int ret;
@@ -180,12 +194,12 @@ int handleBufferSize(int connSock) {
             memcpy(datagram + 3, buffer, arg_size);
         }
     }
-    ret = sctp_sendmsg(connSock, (const void *) datagram, 2,
+    ret = sctp_sendmsg(connSock, (const void *) datagram, arg_size + 3,
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0x00) {
-        printf("Buffer size set");
+        printf("New Buffer size set \n");
     } else {
         printError(res[0]);
     }
@@ -193,74 +207,79 @@ int handleBufferSize(int connSock) {
 }
 
 int handleTransformationChange(int connSock) {
+    uint8_t arg_size = 0;
     int exit = 1;
-    uint8_t command = 0x0, nargs = 1;
+    uint8_t command = 0x07, nargs = 1;
     int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
+    char buffer[256];
     datagram[0] = command;
     datagram[1] = nargs;
-    char buffer[2];
 
     while (exit) {
-        printf(" Enter new transformation \n");
+        printf(" Enter new transformation command \n");
         exit = fgets(buffer, 255, stdin) == NULL;
+        arg_size = (uint8_t)(strlen(buffer) - 1);
         if (exit) {
             printf(" No characters read \n");
         } else {
-            //to do format data
-            sscanf(buffer, "%s %s", datagram[2]);
+            datagram[2] = arg_size;
+            memcpy(datagram + 3, buffer, arg_size);
         }
     }
-    ret = sctp_sendmsg(connSock, (const void *) datagram, 2,
+    ret = sctp_sendmsg(connSock, (const void *) datagram, arg_size + 3,
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
-    if (res[0] == 0) {
-        printf("Transformation done");
+    if (res[0] == 0x00) {
+        printf("Transformation set \n");
     } else {
-        printf("Error code = %s", res[0]);
+        printError(res[0]);
     }
     return 0;
 }
 
 int handleTimeOut(int connSock) {
+    uint8_t arg_size = 0;
     int exit = 1;
-    char command = 10, nargs = 2, ret;
+    uint8_t command = 0x06, nargs = 1;
+    int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
-    char buffer[2];
+    char buffer[256];
     datagram[0] = command;
     datagram[1] = nargs;
+
     while (exit) {
-        printf(" Enter buffer size \n");
-        exit = fgets(buffer, sizeof(buffer), stdin) == NULL;
+        printf(" Enter new timeoute in seconds \n");
+        exit = fgets(buffer, 255, stdin) == NULL;
+        arg_size = (uint8_t)(strlen(buffer) - 1);
         if (exit) {
             printf(" No characters read \n");
         } else {
-            sscanf(buffer, "%s %s", datagram[2], datagram[3]);
-            datagram[2] = atoi(datagram[2]);
-            datagram[3] = atoi(datagram[3]);
+            datagram[2] = arg_size;
+            memcpy(datagram + 3, buffer, arg_size);
         }
     }
-    ret = sctp_sendmsg(connSock, (const void *) datagram, 2,
+    ret = sctp_sendmsg(connSock, (const void *) datagram, arg_size + 3,
                        NULL, 0, 0, 0, STREAM, 0, 0);
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
-    if (res[0] == 0) {
-        printf("Timeout seted");
+    if (res[0] == 0x00) {
+        printf("Timeouts set \n");
     } else {
-        printf("Error code = %s", res[0]);
+        printError(res[0]);
     }
     return 0;
 }
 
 int handleHelp() {
     printf("\nThese are the following commands: \n");
-    printf("0 -> Help\n\n");
-    printf("1 -> Concurrent Connections\n\n");
-    printf("2 -> Transferred Byte\n\n");
-    printf("3 -> Historical Accesses\n\n");
+    printf("0 -> Help\n");
+    printf("1 -> Concurrent Connections\n");
+    printf("2 -> Transferred Bytes\n");
+    printf("3 -> Historical Accesses\n");
     printf("4 -> Get Transformation\n");
     printf("5 -> Set buffer Size\n");
     printf("6 -> Set transformation\n");
@@ -270,7 +289,8 @@ int handleHelp() {
 }
 
 int handleQuit(int connSock) {
-    char command = 6, nargs = 0, ret;
+    uint8_t command = 4, nargs = 0;
+    int ret;
     uint8_t datagram[MAX_DATAGRAM];
     uint8_t res[MAX_DATAGRAM];
     datagram[0] = command;
@@ -280,9 +300,10 @@ int handleQuit(int connSock) {
     ret = sctp_recvmsg(connSock, (void *) res, MAX_DATAGRAM_SIZE,
                        (struct sockaddr *) NULL, 0, 0, 0);
     if (res[0] == 0) {
-        printf("BYE");
+        printf("Goodbye!\n");
+        return 0;
     } else {
-        printf("Error code = %s", res[0]);
+        printError(res[0]);
     }
     return 1;
 }
