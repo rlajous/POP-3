@@ -16,6 +16,4 @@ client/src/cmake_install.cmake
 
 cmake-build-debug/
 
-CMakeLists\.txt
-
 \.vscode/
