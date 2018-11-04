@@ -117,11 +117,9 @@ response_is_done(enum response_state st, bool *errored) {
 
 
 enum response_state
-response_consume(buffer *rb, buffer *wb, struct response_parser *p, bool *errored){
-    enum response_state st = p->response_state;
-    const  uint8_t c = buffer_read(rb);
-    st = response_parser_feed(p, c);
-    buffer_write(wb, c);
+response_consume(buffer *rb, struct response_parser *p){
+    const  uint8_t c = buffer_parse(rb);
+    enum response_state st = response_parser_feed(p, c);
     return st;
 }
 

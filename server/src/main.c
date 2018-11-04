@@ -75,15 +75,10 @@ main(const int argc, char * const *argv){
 
     setsockopt(pop3_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    struct addrinfo *pop3_curr = pop3_addr;
-
-    do {
-      if(bind(pop3_server, pop3_curr->ai_addr, pop3_curr->ai_addrlen) < 0){
+    if(bind(pop3_server, pop3_addr->ai_addr, pop3_addr->ai_addrlen) < 0){
         err_msg = "Unable to bind pop3 socket";
         goto finally;
-      }
-      pop3_curr = pop3_curr->ai_next;
-    } while(pop3_curr != NULL);
+    }
 
     if(listen(pop3_server, 20) < 0){
         err_msg = "Unable to listen at pop3 socket";
@@ -102,7 +97,7 @@ main(const int argc, char * const *argv){
         goto finally;
     }
 
-    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
+    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
     if(spcp_server < 0){
         err_msg = "unable to create spcp_server socket";
         goto finally;
@@ -111,15 +106,10 @@ main(const int argc, char * const *argv){
 
     setsockopt(spcp_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    struct addrinfo *spcp_curr = spcp_addr;
-
-    do {
-        if(bind(spcp_server, spcp_curr->ai_addr, spcp_curr->ai_addrlen) < 0){
-            err_msg = "Unable to bind scpcp socket";
-            goto finally;
-        }
-        spcp_curr = spcp_curr->ai_next;
-    } while(spcp_curr != NULL);
+    if(bind(spcp_server, spcp_addr->ai_addr, spcp_addr->ai_addrlen) < 0){
+        err_msg = "Unable to bind scpcp socket";
+        goto finally;
+    }
 
     if(listen(spcp_server, 20) < 0){
         err_msg = "Unable to listen at spcp socket";
@@ -148,7 +138,7 @@ main(const int argc, char * const *argv){
         err_msg = "initilizing selector";
         goto finally;
     }
-    selector = selector_new(64);
+    selector = selector_new(1024);
     if(selector == NULL) {
         err_msg = "unable to create selector";
         goto finally;

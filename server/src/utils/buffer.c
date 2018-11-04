@@ -12,6 +12,7 @@ inline void
 buffer_reset(buffer *b) {
     b->read  = b->data;
     b->write = b->data;
+    b->parsing = b->data;
 }
 
 void
@@ -25,6 +26,16 @@ buffer_init(buffer *b, const size_t n, uint8_t *data) {
 inline bool
 buffer_can_write(buffer *b) {
     return b->limit - b->write > 0;
+}
+
+inline bool
+buffer_can_parse(buffer *b) {
+    return b->write - b->parsing > 0;
+}
+
+inline bool
+buffer_can_read_parsed(buffer *b) {
+    return b->parsing - b->read > 0;
 }
 
 inline uint8_t *
@@ -43,6 +54,13 @@ inline uint8_t *
 buffer_read_ptr(buffer *b, size_t *nbyte) {
     assert(b->read <= b->write);
     *nbyte = b->write - b->read;
+    return b->read;
+}
+
+inline uint8_t *
+buffer_parse_ptr(buffer *b, size_t *nbyte) {
+    assert(b->read <= b->parsing);
+    *nbyte = b->parsing - b->read;
     return b->read;
 }
 
@@ -67,12 +85,32 @@ buffer_read_adv(buffer *b, const ssize_t bytes) {
     }
 }
 
+inline void
+buffer_parse_adv(buffer *b, const ssize_t bytes) {
+    if(bytes > -1) {
+        b->parsing += (size_t) bytes;
+        assert(b->parsing <= b->write);
+    }
+}
+
 inline uint8_t
 buffer_read(buffer *b) {
     uint8_t ret;
     if(buffer_can_read(b)) {
         ret = *b->read;
         buffer_read_adv(b, 1);
+    } else {
+        ret = 0;
+    }
+    return ret;
+}
+
+inline uint8_t
+buffer_parse(buffer *b) {
+    uint8_t ret;
+    if(buffer_can_parse(b)) {
+        ret = *b->parsing;
+        buffer_parse_adv(b, 1);
     } else {
         ret = 0;
     }
@@ -94,10 +132,12 @@ buffer_compact(buffer *b) {
     } else if(b->read == b->write) {
         b->read  = b->data;
         b->write = b->data;
+        b->parsing = b->data;
     } else {
         const size_t n = b->write - b->read;
         memmove(b->data, b->read, n);
         b->read  = b->data;
+        b->parsing = b->read;
         b->write = b->data + n;
     }
 }

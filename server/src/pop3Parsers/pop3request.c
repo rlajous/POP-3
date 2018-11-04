@@ -167,27 +167,20 @@ request_is_done(const enum request_state st, bool* errored) {
 }
 
 static bool
-request_process(struct request_parser *p, struct request_queue *q) {
+request_marshall(struct request_parser *p, struct request_queue *q) {
     //TODO: RETURN ERROR
     queue_request(q, &p->request);
     return true;
 }
 
 extern enum request_state
-request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored, struct request_queue *q) {
-    enum request_state st = p->state;
-    while(buffer_can_read(rb)) {
-        if(!buffer_can_write(wb)) {
-            break;
-        }
-        const uint8_t c = buffer_read(rb);
-        st = request_parser_feed(p, c);
-        p->request.length++;
-        buffer_write(wb, c);
-        if(request_is_done(st, errored)) {
-            *errored &= request_process(p, q);
-            request_parser_init(p);
-        }
+request_consume(buffer *rb, struct request_parser *p, bool *errored, struct request_queue *q) {
+
+    const  uint8_t c = buffer_parse(rb);
+    enum request_state st = request_parser_feed(p, c);
+    p->request.length++;
+    if(request_is_done(st, errored)) {
+        *errored &= request_marshall(p, q);
     }
     return st;
 }

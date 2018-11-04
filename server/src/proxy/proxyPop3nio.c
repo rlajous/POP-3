@@ -61,7 +61,7 @@ typedef enum {
 } transformation_status;
 
 struct hello_st {
-    buffer                  *wb, *rb;
+    buffer                  *buffer;
     struct response_parser  response;
     bool                    done;
 };
@@ -86,7 +86,7 @@ struct error_st {
 };
 
 struct request_st {
-    buffer                  *wb, *rb;
+    buffer                  *buffer;
     struct request_parser   parser;
     int                     *fd;
     fd_interest             duplex;
@@ -156,12 +156,10 @@ struct pop3 {
     } origin;
 
     /** buffers para ser usados read_buffer, write_buffer.*/
-    uint8_t *request_r,  *request_w;
+    uint8_t *request_r;
     uint8_t *response_r, *response_w;
-    uint8_t *transform_r, *transform_w;
-    buffer request_r_buffer,  request_w_buffer;
+    buffer request_buffer;
     buffer response_r_buffer, response_w_buffer;
-    buffer transform_r_buffer, transform_w_buffer;
 
     struct request_queue *request_queue;
 
@@ -223,18 +221,12 @@ static struct pop3 * pop3_new(int client_fd){
     stm_init(&ret->stm);
 
     ret->request_r      = malloc(BUFFER_SIZE);
-    ret->request_w      = malloc(BUFFER_SIZE);
     ret->response_r     = malloc(BUFFER_SIZE);
     ret->response_w     = malloc(BUFFER_SIZE);
-    ret->transform_r    = malloc(BUFFER_SIZE);
-    ret->transform_w    = malloc(BUFFER_SIZE);
 
-    buffer_init(&ret->request_r_buffer  , BUFFER_SIZE, ret->request_r);
-    buffer_init(&ret->request_w_buffer  , BUFFER_SIZE, ret->request_w);
+    buffer_init(&ret->request_buffer  , BUFFER_SIZE, ret->request_r);
     buffer_init(&ret->response_r_buffer , BUFFER_SIZE, ret->response_r);
     buffer_init(&ret->response_w_buffer , BUFFER_SIZE, ret->response_w);
-    buffer_init(&ret->transform_r_buffer, BUFFER_SIZE, ret->transform_r);
-    buffer_init(&ret->transform_w_buffer, BUFFER_SIZE, ret->transform_w);
 
     ret->request_queue = malloc(sizeof(struct request_queue));
     queue_init(ret->request_queue);
@@ -599,7 +591,7 @@ capa_init(const unsigned state, struct selector_key *key) {
     memcpy(d->message, "CAPA\r\n", CAPA_CMD);
     d->remaining   = CAPA_CMD;
     d->current     = d->message;
-    d->wb          = &(p->request_w_buffer);
+    d->wb          = &(p->request_buffer);
     memcpy(&d->pipelineDef, &def, sizeof(def));
     d->pipeline    = parser_init(parser_no_classes(), &d->pipelineDef);
 
@@ -709,8 +701,8 @@ hello_interests(struct selector_key *key) {
   struct pop3     *p =  ATTACHMENT(key);
   struct hello_st *d = &p->client.hello;
 
-  fd_interest origin = compute_read_interests(key->s, d->rb, OP_READ, p->origin_fd);
-  fd_interest client = compute_write_interests(key->s, d->wb, OP_WRITE, p->client_fd);
+  compute_read_interests(key->s, d->buffer, OP_READ, p->origin_fd);
+  compute_write_interests(key->s, d->buffer, OP_WRITE, p->client_fd);
 
   return ret;
 }
@@ -720,8 +712,7 @@ hello_init(const unsigned state, struct selector_key *key) {
     struct pop3     *p =  ATTACHMENT(key);
     struct hello_st *d = &p->client.hello;
 
-    d->wb              = &(p->request_w_buffer);
-    d->rb              = &(p->request_r_buffer);
+    d->buffer          = &(p->request_buffer);
     d->done            = false;
 
   struct request *hello = malloc(sizeof(struct request));
@@ -737,28 +728,16 @@ hello_read(struct selector_key *key) {
     struct pop3 *p     =  ATTACHMENT(key);
     struct hello_st *d = &p->client.hello;
     unsigned  ret      = HELLO;
-    buffer *rb         = d->rb;
-    buffer *wb         = d->wb;
+    buffer *buffer     = d->buffer;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    ptr = buffer_write_ptr(rb, &count);
+    ptr = buffer_write_ptr(buffer, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-      enum response_state st;
-      buffer_write_adv(rb, n);
-      while(buffer_can_read(rb)) {
-        if(!buffer_can_write(wb)){
-          break;
-        }
-        st = response_consume(rb, wb, &d->response, 0);
-        if(response_is_done(st, 0)){
-          response_close(&d->response);
-          d->done = true;
-        }
-      }
-      ret = hello_interests(key);
+        buffer_write_adv(buffer, n);
+        ret = hello_interests(key);
     } else {
         ret = ERROR;
     }
@@ -772,22 +751,34 @@ hello_write(struct selector_key *key) {
     struct hello_st *d = &p->client.hello;
 
     unsigned  ret     = HELLO;
+    buffer  *buffer   = d->buffer;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    ptr = buffer_read_ptr(d->wb, &count);
+    enum response_state st;
+    while(buffer_can_parse(d->buffer)) {
+        st = response_consume(buffer, &d->response);
+        if(response_is_done(st, 0)){
+            response_close(&d->response);
+            d->done = true;
+        }
+    }
+
+    ptr = buffer_parse_ptr(d->buffer, &count);
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
     if(n == -1) {
         ret = ERROR;
     } else {
-        buffer_read_adv(d->wb, n);
-        if(!buffer_can_read(d->wb) && d->done) {
+        buffer_read_adv(d->buffer, n);
+        if(d->done) {
             selector_status s = SELECTOR_SUCCESS;
             s |= selector_set_interest_key(key, OP_NOOP);
             s |= selector_set_interest    (key->s, p->origin_fd, OP_WRITE);
 
             ret = SELECTOR_SUCCESS == s ? CAPA : ERROR;
+        } else {
+            ret = hello_interests(key);
         }
     }
 
@@ -804,16 +795,14 @@ request_init(const unsigned state, struct selector_key *key) {
     struct request_st *d = &p->client.request;
 
     d->fd        = &p->client_fd;
-    d->rb        = &p->request_r_buffer;
-    d->wb        = &p->request_w_buffer;
+    d->buffer    = &p->request_buffer;
     d->duplex    = OP_READ | OP_WRITE;
     d->other     = &p->origin.request;
     d->request_queue = p->request_queue;
 
     d = &p->origin.request;
     d->fd       = &p->origin_fd;
-    d->rb       = &p->request_r_buffer;
-    d->wb       = &p->request_w_buffer;
+    d->buffer   = &p->request_buffer;
     d->duplex   = OP_READ | OP_WRITE;
     d->other    = &p->client.request;
     d->request_queue = p->request_queue;
@@ -843,26 +832,40 @@ determine_response_state(struct request_queue *q){
 }
 
 static unsigned
-request_process(struct selector_key *key) {
+request_interests(struct selector_key *key) {
+    struct pop3 *p            = ATTACHMENT(key);
     struct request_st * d     = &ATTACHMENT(key)->client.request;
     struct request_st *other  = d->other;
 
-    buffer *rb      = d->rb;
-    buffer *wb      = d->wb;
-    unsigned  ret   = REQUEST;
-    bool   error    = false;
+    unsigned ret = REQUEST;
 
-    int st = request_consume(rb, wb, &d->parser, &error, d->request_queue);
-    fd_interest client = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
-    fd_interest origin = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
+    fd_interest client = compute_read_interests(key->s, d->buffer, d->duplex, p->client_fd);
+    fd_interest origin = compute_write_interests(key->s, other->buffer, other->duplex, p->origin_fd);
 
     if(client == OP_NOOP && origin == OP_NOOP) {
-        compute_write_interests(key->s, d->rb, d->duplex, *d->fd);
-        compute_read_interests(key->s, other->wb, other->duplex, *other->fd);
+        compute_write_interests(key->s, d->buffer, d->duplex, p->client_fd);
+        compute_read_interests(key->s, other->buffer, other->duplex, p->origin_fd);
         ret = RESPONSE;
     }
 
     return ret;
+}
+
+bool
+request_can_read(struct selector_key *key) {
+    struct pop3 *p = ATTACHMENT(key);
+    buffer * buffer = p->client.request.buffer;
+    uint8_t c;
+    ssize_t n;
+
+    if(!buffer_can_write(buffer)) {
+        return false;
+    }
+    if((recv(p->client_fd, &c, 1, 0)) > 0) {
+        buffer_write(buffer, c);
+        return true;
+    }
+    return false;
 }
 
 static unsigned
@@ -870,18 +873,17 @@ request_read(struct selector_key *key) {
     struct request_st * d     = &ATTACHMENT(key)->client.request;
     struct request_st *other  = d->other;
 
-    buffer *rb      = d->rb;
-    buffer *wb      = d->wb;
+    buffer *buffer      = d->buffer;
     unsigned  ret   = REQUEST;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    ptr = buffer_write_ptr(rb, &count);
+    ptr = buffer_write_ptr(buffer, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
-        buffer_write_adv(rb, n);
-        ret = request_process(key);
+        buffer_write_adv(buffer, n);
+        ret = request_interests(key);
     } else {
         shutdown(*d->fd, SHUT_RD);
         d->duplex &= ~OP_READ;
@@ -902,25 +904,37 @@ request_read_close(const unsigned state, struct selector_key *key) {
 
 static unsigned
 request_write(struct selector_key *key) {
-    struct pop3       *p       =  ATTACHMENT(key);
-    struct request_st *d       = &p->origin.request;
-    struct request_st *other   = d->other;
-    struct request    *request = NULL;
+    struct pop3       *p          =  ATTACHMENT(key);
+    struct request_st *d          = &p->origin.request;
+    struct request_st *other      = d->other;
+    struct request    *request    = NULL;
+    struct request_parser *parser = &d->other->parser;
 
     unsigned ret = REQUEST;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
     bool    complete_request = true;
+    bool    error            = false;
 
-    buffer *b = d->wb;
-    ptr = buffer_read_ptr(b, &count);
+    buffer *b = d->buffer;
+
+    enum request_state st;
+    while(buffer_can_parse(d->buffer)) {
+        st = request_consume(b, parser, &error, d->request_queue);
+        if(request_is_done(st, &error)){
+            request_close(parser);
+            request_parser_init(parser);
+        }
+    }
 
     request = peek_next_unsent(d->request_queue);
     if(request == NULL) {
         complete_request = false;
-        request = &other->parser.request;
+        request = &parser->request;
     }
+
+    ptr = buffer_parse_ptr(d->buffer, &count);
 
     if(!p->pipeliner) {
         count = count > request->length ? request->length : count;
@@ -937,25 +951,24 @@ request_write(struct selector_key *key) {
         //TODO: ESTO NO ES ERROR
         return ERROR;
     } else {
-        buffer_read_adv(d->wb, n);
+        buffer_read_adv(b, n);
         request->length -= n;
-        if(buffer_can_read(d->rb)) {
-            ret = request_process(key);
-        }
+
         if(!p->pipeliner) {
             if(complete_request) {
                 request->length = -1;
-                compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
-                compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
-                ret = RESPONSE;
+                compute_read_interests(key->s, b, d->duplex, *d->fd);
+                compute_write_interests(key->s, b, other->duplex, *other->fd);
+                return RESPONSE;
             }
         } else {
-            if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb) && !queue_is_empty(d->request_queue)) {
-                compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
-                compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
-                ret = RESPONSE;
+            if(!buffer_can_read_parsed(d->buffer) && !queue_is_empty(d->request_queue) && !request_can_read(key)) {
+                compute_read_interests(key->s, b, d->duplex, *d->fd);
+                compute_write_interests(key->s, b, other->duplex, *other->fd);
+                return RESPONSE;
             }
         }
+        ret = request_interests(key);
     }
 
     return ret;
@@ -985,7 +998,6 @@ response_init(const unsigned state, struct selector_key *key) {
     d->other    = &p->client.response;
     d->request_queue = p->request_queue;
     response_parser_init(&d->parser, pop_request(d->request_queue));
-
 }
 
 static void
@@ -1007,62 +1019,26 @@ lock_user(struct selector_key *key){
 }
 
 static unsigned
-response_interests(struct response_st *d, struct selector_key *key);
+response_interests(struct selector_key *key);
 
 static unsigned
 response_read(struct selector_key *key) {
     struct pop3        *pop = ATTACHMENT(key);
     struct response_st *d   = &pop->origin.response;
-    struct response_st *other  = d->other;
 
     buffer *rb      = d->rb;
-    buffer *wb      = d->wb;
-    struct response_parser *p = &d->parser;
-
-    if(should_transform(d->parser.request)) {
-        return TRANSFORM;
-    }
 
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
-    struct request_queue *q = d->request_queue;
-    struct request *request;
     unsigned ret = RESPONSE;
-    bool locked_usr = ATTACHMENT(key)->verified_username;
 
 
     ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(rb, n);
-        while(buffer_can_read(rb)) {
-            if(!buffer_can_write(wb)){
-                break;
-            }
-            int st = response_consume(rb, wb, p, 0);
-            if(response_is_done(st, 0)) {
-                if(p->request->cmd == user && p->pop3_response_success == true && !locked_usr){
-                    write_user(key, p->request->arg[0], p->request->argsize[0]);
-                }
-                if(p->request->cmd == pass && p->pop3_response_success == true){
-                    lock_user(key);
-                }
-                response_close(p);
-                if(!queue_is_empty(q) && pop->pipeliner) {
-                    if(determine_response_state(q) == TRANSFORM) {
-                        selector_set_interest(key->s, *d->fd, OP_NOOP);
-                    } else {
-                        request = pop_request(q);
-                        response_parser_init(p, request);
-                        ret = response_interests(d, key);
-                    }
-                } else {
-                    ret = RESPONSE;
-                }
-            }
-        }
-        ret = response_interests(d, key);
+        ret = response_interests(key);
     //TODO: Checkear temas de shutdown
     } else {
         shutdown(*d->fd, SHUT_RD);
@@ -1077,16 +1053,18 @@ response_read(struct selector_key *key) {
 }
 
 static unsigned
-response_interests(struct response_st *d, struct selector_key *key) {
+response_interests(struct selector_key *key) {
     unsigned ret;
+    struct pop3        *pop    = ATTACHMENT(key);
+    struct response_st *d   = &pop->origin.response;
     struct response_st *other  = d->other;
 
-    fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, *d->fd);
-    fd_interest client = compute_write_interests(key->s, other->wb, other->duplex, *other->fd);
+    fd_interest origin = compute_read_interests(key->s, d->rb, d->duplex, pop->origin_fd);
+    fd_interest client = compute_write_interests(key->s, other->rb, other->duplex, pop->client_fd);
 
     if(client == OP_NOOP && origin == OP_NOOP) {
-        compute_write_interests(key->s, d->wb, d->duplex, *d->fd);
-        compute_read_interests(key->s, other->rb, other->duplex, *other->fd);
+        compute_write_interests(key->s, d->wb, d->duplex, pop->origin_fd);
+        compute_read_interests(key->s, other->rb, other->duplex, pop->client_fd);
         ret = REQUEST;
     } else {
         ret = RESPONSE;
@@ -1099,39 +1077,71 @@ response_write(struct selector_key *key){
     struct pop3        *p      = ATTACHMENT(key);
     struct response_st *d      = &ATTACHMENT(key)->client.response;
     struct response_st *other  = d->other;
-    buffer *req_wb   = &p->request_w_buffer;
-    buffer *req_rb   = &p->request_r_buffer;
-
 
     unsigned ret    = RESPONSE;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
+    buffer  *buffer = d->rb;
+    bool locked_usr = ATTACHMENT(key)->verified_username;
 
-    buffer *b   = d->wb;
-    ptr         = buffer_read_ptr(b, &count);
+    struct response_parser *parser = &other->parser;
+    struct request_queue   *queue  = d->request_queue;
+    struct request         *request;
 
+    if(should_transform(parser->request)) {
+        selector_set_interest(key->s, *other->fd, OP_READ);
+        selector_set_interest(key->s, *d->fd, OP_WRITE);
+        return TRANSFORM;
+    }
+
+    enum response_state st;
+    while(buffer_can_parse(buffer)) {
+        st = response_consume(buffer, parser);
+        if(response_is_done(st, 0)) {
+            if(parser->request->cmd == user && parser->pop3_response_success == true && !locked_usr) {
+                write_user(key, parser->request->arg[0], parser->request->argsize[0]);
+            }
+            if(parser->request->cmd == pass && parser->pop3_response_success == true){
+                lock_user(key);
+            }
+            response_close(parser);
+            if(!queue_is_empty(queue) &&
+                p->pipeliner &&
+                determine_response_state(queue) != TRANSFORM) {
+                    request = pop_request(queue);
+                    response_parser_init(parser, request);
+            }
+        }
+        break;
+    }
+
+    ptr = buffer_parse_ptr(buffer, &count);
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+
     if(n == -1) {
         ret = ERROR;
     } else {
-        buffer_read_adv(d->wb, n);
+        buffer_read_adv(buffer, n);
 
-        if(!buffer_can_read(d->rb) && !buffer_can_read(d->wb)
-           && ((queue_is_empty(d->request_queue) && p->pipeliner) || (!p->pipeliner)) && response_is_done(other->parser.response_state, 0)) {
-            compute_read_interests(key->s, req_rb, d->duplex, *d->fd);
-            compute_write_interests(key->s, req_wb, other->duplex, *other->fd);
+        if(!buffer_can_read_parsed(buffer) &&
+            ((queue_is_empty(d->request_queue) && p->pipeliner) || (!p->pipeliner))
+            && response_is_done(other->parser.response_state, 0)) {
+            compute_read_interests(key->s, &p->request_buffer, OP_READ, *d->fd);
+            compute_write_interests(key->s, &p->request_buffer, OP_WRITE, *other->fd);
             ret = REQUEST;
-        } else if(!buffer_can_read(d->wb) &&
+        } else if(!buffer_can_read_parsed(buffer) &&
                     response_is_done(other->parser.response_state, 0) &&
                     determine_response_state(d->request_queue) == TRANSFORM) {
             response_parser_init(&other->parser, pop_request(d->request_queue));
             selector_set_interest(key->s, *other->fd, OP_READ);
-            selector_set_interest(key->s, *d->fd, OP_NOOP);
+            selector_set_interest(key->s, *d->fd, OP_WRITE);
             return TRANSFORM;
         }
     }
-
+    if(ret == RESPONSE){
+        ret = response_interests(key);
+    }
     return ret;
 }
 
@@ -1149,8 +1159,8 @@ transform_init(const unsigned state, struct selector_key *key) {
 
     t->rb                  = &p->response_r_buffer;
     t->wb                  = &p->response_w_buffer;
-    t->t_rb                = &p->transform_r_buffer;
-    t->t_wb                = &p->transform_w_buffer;
+//    t->t_rb                = &p->transform_r_buffer;
+//    t->t_wb                = &p->transform_w_buffer;
     t->request_queue       = p->request_queue;
     t->transformation_done = false;
     t->transform_needed    = NULL;
@@ -1162,26 +1172,39 @@ transform_interests(struct transform_st *t, struct selector_key *key) {
     struct pop3 *pop = ATTACHMENT(key);
     buffer  *rb   = t->rb;
     buffer  *wb   = t->wb;
-    buffer  *t_rb = t->t_rb;
-    buffer  *t_wb = t->t_wb;
-    unsigned ret;
 
     fd_interest origin = compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
     fd_interest client = compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
 
     if(t->transform_needed) {
-        compute_read_interests(key->s, t_wb, OP_READ, pop->transformation_read);
-        compute_write_interests(key->s, t_rb, OP_WRITE, pop->transformation_write);
+        compute_read_interests(key->s, wb, OP_READ, pop->transformation_read);
+        compute_write_interests(key->s, rb, OP_WRITE, pop->transformation_write);
     }
 
-    if(client == OP_NOOP && origin == OP_NOOP) {
-        compute_read_interests(key->s, &pop->request_r_buffer, OP_READ, pop->client_fd);
-        compute_write_interests(key->s, &pop->request_w_buffer, OP_WRITE, pop->origin_fd);
-        ret = REQUEST;
-    } else {
-        ret = TRANSFORM;
-    }
-    return ret;
+    compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+
+    return TRANSFORM;
+//    struct pop3 *pop = ATTACHMENT(key);
+//    buffer  *rb   = t->rb;
+//    buffer  *wb   = t->wb;
+//    unsigned ret;
+//
+//    fd_interest origin = compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
+//    fd_interest client = compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+//
+//    if(t->transform_needed) {
+//        compute_read_interests(key->s, t_wb, OP_READ, pop->transformation_read);
+//        compute_write_interests(key->s, t_rb, OP_WRITE, pop->transformation_write);
+//    }
+//
+//    if(client == OP_NOOP && origin == OP_NOOP) {
+//        compute_read_interests(key->s, &pop->request_r_buffer, OP_READ, pop->client_fd);
+//        compute_write_interests(key->s, &pop->request_w_buffer, OP_WRITE, pop->origin_fd);
+//        ret = REQUEST;
+//    } else {
+//        ret = TRANSFORM;
+//    }
+//    return ret;
 }
 
 static unsigned
@@ -1190,82 +1213,97 @@ transform_read(struct selector_key *key) {
     struct transform_st *t   = &pop->transform;
 
     buffer  *rb  = t->rb;
-    buffer  *wb  = t->wb;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
 
-    struct response_parser *parser = &t->parser;
-    struct request_queue   *queue  = t->request_queue;
-    struct request         *request;
-    unsigned ret                   = TRANSFORM;
+    unsigned ret;
 
     ptr = buffer_write_ptr(rb, &count);
     n = recv(key->fd, ptr, count, 0);
     if(n > 0) {
         buffer_write_adv(rb, n);
-        while(buffer_can_read(rb)) {
-            if(t->transform_needed) {
-                wb = t->t_rb;
-            }
-            if(!buffer_can_write(wb)){
-                break;
-            }
-            int st = response_consume(rb, wb, parser, 0);
-            if(t->transform_needed == false && st == response_new_line) {
-                t->transform_needed = parser->pop3_response_success ? true : false;
-                open_transformation(key);
-            }
-            if(response_is_done(st, 0)) {
-                response_close(parser);
-                if(!queue_is_empty(queue) && pop->pipeliner) {
-                    ret = determine_response_state(queue);
-                    if(ret == TRANSFORM) {
-                        request = pop_request(queue);
-                        response_parser_init(parser, request);
-                    } else {
-                        selector_set_interest(key->s, pop->origin_fd, OP_NOOP);
-                        compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
-                        return TRANSFORM;
-                    }
-                }
-            }
-        }
         ret = transform_interests(t, key);
+    } else {
+        ret = ERROR;
     }
     return ret;
 }
 
 static unsigned
-transform_write(struct selector_key *key){
+transform_write(struct selector_key *key) {
     struct pop3         *pop = ATTACHMENT(key);
     struct transform_st *t   = &pop->transform;
 
     buffer  *rb  = t->rb;
     buffer  *wb  = t->wb;
-    buffer  *tb  = t->t_wb;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
+    struct response_parser *parser = &t->parser;
+    struct request_queue   *queue  = t->request_queue;
+    struct request         *request;
 
     unsigned ret = TRANSFORM;
+    enum response_state st;
 
-    if(t->transform_needed == false || buffer_can_read(wb)) {
-        tb = t->wb;
+    if(t->transform_needed) {
+      ptr = buffer_read_ptr(wb, &count);
+      n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+
+      if(n == -1) {
+        ret = ERROR;
+      } else {
+        buffer_read_adv(wb, n);
+
+        if(t->transformation_done && !buffer_can_read(wb)) {
+          if(queue_is_empty(queue)) {
+            selector_set_interest(key->s, pop->client_fd, OP_READ);
+            selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
+            ret = REQUEST;
+          } else {
+            selector_set_interest(key->s, pop->origin_fd, OP_READ);
+            selector_set_interest(key->s, pop->client_fd, OP_WRITE);
+            ret = RESPONSE;
+          }
+        } else {
+          ret = transform_interests(t, key);
+        }
+      }
+      return ret;
     }
-    ptr = buffer_read_ptr(tb, &count);
+
+    while(buffer_can_parse(rb)) {
+        st = response_consume(rb, parser);
+        if(t->transform_needed == false && st == response_new_line) {
+            t->transform_needed = parser->pop3_response_success ? true : false;
+            open_transformation(key);
+            break;
+        }
+        if(response_is_done(st, 0)) {
+            response_close(parser);
+            break;
+        }
+    }
+
+    ptr = buffer_parse_ptr(rb, &count);
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
 
     if(n == -1) {
         ret = ERROR;
     } else {
-        buffer_read_adv(tb, n);
+        buffer_read_adv(rb, n);
 
-        if(!buffer_can_read(tb) && !buffer_can_read(wb) &&
-            response_is_done(t->parser.response_state, 0) && t->transformation_done) {
-//            compute_read_interests(key->s, req_rb, d->duplex, *d->fd);
-//            compute_write_interests(key->s, req_wb, other->duplex, *other->fd);
-            ret = determine_response_state(t->request_queue);
+        if(response_is_done(t->parser.response_state, 0) && !buffer_can_read_parsed(rb)) {
+          if(queue_is_empty(queue)) {
+            selector_set_interest(key->s, pop->client_fd, OP_READ);
+            selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
+            ret = REQUEST;
+          } else {
+            selector_set_interest(key->s, pop->origin_fd, OP_READ);
+            selector_set_interest(key->s, pop->client_fd, OP_WRITE);
+            ret = RESPONSE;
+          }
         } else {
             ret = transform_interests(t, key);
         }
@@ -1356,7 +1394,7 @@ open_transformation(struct selector_key * key) {
         close(transform_proxy[WRITE_END]);
 
         if(selector_fd_set_nio(transform_proxy[READ_END]) != -1 &&
-        selector_register(key->s, transform_proxy[READ_END], &transformation_handler, OP_NOOP, p) == SELECTOR_SUCCESS) {
+        selector_register(key->s, transform_proxy[READ_END], &transformation_handler, OP_READ, p) == SELECTOR_SUCCESS) {
             p->transformation_read = transform_proxy[READ_END];
         } else {
             close(proxy_transform[WRITE_END]);
@@ -1365,7 +1403,7 @@ open_transformation(struct selector_key * key) {
         }
 
         if(selector_fd_set_nio(proxy_transform[WRITE_END]) != -1 &&
-           selector_register(key->s, proxy_transform[WRITE_END], &transformation_handler, OP_NOOP, p) == SELECTOR_SUCCESS) {
+           selector_register(key->s, proxy_transform[WRITE_END], &transformation_handler, OP_WRITE, p) == SELECTOR_SUCCESS) {
             p->transformation_write = proxy_transform[WRITE_END];
         } else {
             selector_unregister_fd(key->s, transform_proxy[READ_END]);
@@ -1408,7 +1446,7 @@ transf_read(struct selector_key *key) {
     struct pop3         *p = ATTACHMENT(key);
     struct transform_st *t = &p->transform;
 
-    buffer  *b = t->t_wb;
+    buffer  *b = t->wb;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
@@ -1416,7 +1454,8 @@ transf_read(struct selector_key *key) {
     ptr = buffer_write_ptr(b, &count);
     n = read(p->transformation_read, ptr, count);
     if (n <= 0) {
-//        selector_set_interest(key->s, p->client_fd, OP_WRITE);
+        t->transformation_done = true;
+        selector_set_interest(key->s, p->client_fd, OP_WRITE);
         selector_set_interest(key->s, p->transformation_read, OP_NOOP);
     } else {
         buffer_write_adv(b, n);
@@ -1428,12 +1467,23 @@ static void
 transf_write(struct selector_key *key) {
     struct pop3         *p = ATTACHMENT(key);
     struct transform_st *t = &p->transform;
+    struct response_parser *parser = &t->parser;
 
-    buffer  *b = t->t_rb;
+    buffer  *b = t->rb;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
-    ptr = buffer_read_ptr(b, &count);
+
+    enum response_state st = response_byte;
+    while(buffer_can_parse(b)) {
+        st = response_consume(b, parser);
+        if(response_is_done(st, 0)) {
+            response_close(parser);
+            break;
+        }
+    }
+
+    ptr = buffer_parse_ptr(b, &count);
     n = write(key->fd, ptr, count);
 
     if (n > 0) {
@@ -1445,9 +1495,14 @@ transf_write(struct selector_key *key) {
 //        t->status = transf_status_err;
         selector_set_interest_key(key, OP_NOOP);
         selector_set_interest(key->s, p->origin_fd, OP_READ);
+        selector_set_interest(key->s, p->client_fd, OP_WRITE);
 //        t->error_rd = true;
     }
 
+    if(response_is_done(st, 0) && !buffer_can_read_parsed(b)) {
+        selector_unregister_fd(key->s, p->transformation_write);
+        close(p->transformation_write);
+    }
 }
 
 static void
@@ -1455,7 +1510,9 @@ transf_close(struct selector_key *key) {
     struct pop3         *p = ATTACHMENT(key);
     struct transform_st *t = &p->transform;
 
-    t->transformation_done = true;
+    if(key->fd == p->transformation_read) {
+        t->transformation_done = true;
+    }
     close(key->fd);
 }
 
@@ -1471,7 +1528,7 @@ error_init(const unsigned state, struct selector_key *key) {
 
   d->message     = error_messages[d->error];
   d->remaining   = strlen(d->message);
-  d->wb          = &(p->request_w_buffer);
+  d->wb          = &(p->request_buffer);
   selector_set_interest(key->s, p->client_fd, OP_WRITE);
 }
 
