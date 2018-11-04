@@ -75,7 +75,7 @@
           <preamble>La estructura de un request</preamble>
           <artwork>
 +-----+-------+----------+----------+...+----------+----------+
-| CMD | NARGS | ARGLEN 1  |  ARG 1  |   | ARGLEN N |   ARG N  |
+| CMD | NARGS | ARGLEN 1 |  ARG 1   |   | ARGLEN N |   ARG N  |
 +-----+-------+----------+----------+...+----------+----------+
 |  1  |   1   |    1     | Variable |   |    1     | Variable |
 +-----+-------+----------+----------+...+----------+----------+
@@ -83,18 +83,89 @@
         </figure>
         <t>El request se compone por un numero variable de segmentos, estos son:
           <list>
-            <t>CMD: El identificador de comando, tiene un tamaño de un byte</t>
-            <t>NARGS: La cantidad de argumentos, tiene tamaño de un byte</t>
+            <t>CMD: El identificador de comando, tiene un tamaño de un byte.
+            </t>
+            <t>NARGS: La cantidad de argumentos, tiene tamaño de un byte.
+            </t>
             <t>ARGLEN: Cada argumento se encuentra precedido por el largo del mismo, este tiene un maximo
-               de 255 ya que este campo tiene un byte de longitud</t>
+               de 255 ya que este campo tiene un byte de longitud.
+            </t>
             <t>ARG: El argumento de tamaño anteriormente especificado, los argumentos son representaciones
-              ASCII
+              ASCII.
             </t>
           </list>
         </t>
       </section>
+      <section title="La Response">
+        <figure>
+          <preamble>La estructura de un response</preamble>
+          <artwork>
+            +-------------+---------+----------+
+            | STATUS_CODE | DATALEN |   DATA   |
+            +-------------+---------+----------+
+            |      1      |    1    | Variable |
+            +-------------+---------+----------+
+          </artwork>
+        </figure>
+        <t>El response se compone por un numero variable de segmentos, estos son:
+          <list>
+            <t>STATUS_CODE: Identifica el codigo de la respuesta.
+            </t>
+            <t>DATALEN: La longitud de los datos de la respuesta del servidor.
+            </t>
+            <t>DATA: Los datos enviados por el servidor, estos se encuentran en codificación ASCII.
+            </t>
+          </list>
+        </t>
+        <section title="Codigos de respuesta">
+          <t>Discutimos brevemente los posibles codigos de respuesta que un servidor puede enviar a un cliente
+          </t>
+          <t>
+            <list>
+              <t>0x00: es el response de OK, indica que el request se ejecuto con exito por parte del servidor.
+              </t>
+              <t>0x01: Error de autenticación, indica que hubo un error al tratar de autenticar el usuario.
+              </t>
+              <t>0x02: Comando invalido, el comando que se envio en el request no es un comando valido.
+              </t>
+              <t>0x03: Argumentos invalidoos, indica que los argumentos para el comando no son validos.
+              </t>
+              <t>0x04: Error general, es el error de fallback del servidor cuando no puede especificar
+                por que fallo.
+              </t>
+            </list>
+          </t>
+        </section>
+      </section>
       <section title="Estado de autenticación">
-
+        <t>Una vez inicializada la conexión el servidor se encuentra en el estado de autenticación. El cliente
+        debe proveer su usuario mediante el comando 0x00, al cual llamaremos USER.
+        </t>
+        <t>El comando USER se compone de la siguiente manera:
+          <list>
+            <t>Argumentos: uno, la representación ASCII del nombre de usuario.
+            </t>
+            <t>Restricciones: Solo se puede utilizar en el estado de autenticación una vez inicializada la conexión
+               o inmediatamente despues de un USER o PASS erróneo.
+            </t>
+            <t>Discusión: Primero se debe mandar el comando USER, si el usuario esta registrado entonces el servidor
+              responde con una respuesta positiva mandando el byte 0x00.
+            </t>
+          </list>
+        </t>
+        <t>Inmediatamente despues del comando USER debe proveer mediante otro request la contraseña asociada al
+          usuario. Para esto emite un request al servidor con el comando 0x01, al cual le llamaremos PASS de
+          ahora en adelante.
+        </t>
+        <t>El comando PASS se compone de la siguiente manera:
+          <list>
+            <t>Argumentos: uno, la representación ASCII de la contraseña.
+            </t>
+            <t>Restricciones: Solo se puede utilizar en el estado de autenticación una vez inicializada la conexión
+              e inmediatamente despues de un USER.
+            </t>
+          </list>
+        </t>
       </section>
       <section title="Estado de transacción">
 
