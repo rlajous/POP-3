@@ -36,7 +36,7 @@ enum state {
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_VALUE;
+    ret->type    = BOUNDARY_BORDER_END_VALUE;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -53,28 +53,28 @@ value_cr(struct parser_event *ret, const uint8_t c) {
 
 static void
 end_hyphen(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_VALUE_END_HYPHENS;
+    ret->type    = BOUNDARY_BORDER_END_VALUE_END_HYPHENS;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 end_crlf(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_VALUE_END_CRLF;
+    ret->type    = BOUNDARY_BORDER_END_VALUE_END_CRLF;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 wait(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_WAIT;
+    ret->type    = BOUNDARY_BORDER_END_WAIT;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 unexpected(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_UNEXPECTED;
+    ret->type    = BOUNDARY_BORDER_END_UNEXPECTED;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -86,7 +86,7 @@ unexpected_cr(struct parser_event *ret, const uint8_t c) {
 
 static void
 unexpected_crlf(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_BORDER_END_UNEXPECTED_CRLF;
+    ret->type    = BOUNDARY_BORDER_END_UNEXPECTED_CRLF;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -171,22 +171,22 @@ mime_boundary_border_end_event(enum mime_boundary_border_end_event_type type) {
     const char *ret;
 
     switch(type) {
-        case MIME_BOUNDARY_BORDER_END_VALUE:
+        case BOUNDARY_BORDER_END_VALUE:
             ret = "value(c)";
             break;
-        case MIME_BOUNDARY_BORDER_END_VALUE_END_HYPHENS:
+        case BOUNDARY_BORDER_END_VALUE_END_HYPHENS:
             ret = "value_end(--)";
             break;
-        case MIME_BOUNDARY_BORDER_END_VALUE_END_CRLF:
+        case BOUNDARY_BORDER_END_VALUE_END_CRLF:
             ret = "value_end(\\r\\n)";
             break;
-        case MIME_BOUNDARY_BORDER_END_UNEXPECTED:
+        case BOUNDARY_BORDER_END_UNEXPECTED:
             ret = "unexpected(c)";
             break;
-        case MIME_BOUNDARY_BORDER_END_UNEXPECTED_CRLF:
+        case BOUNDARY_BORDER_END_UNEXPECTED_CRLF:
             ret = "unexpected_crlf(c)";
             break;
-        case MIME_BOUNDARY_BORDER_END_WAIT:
+        case BOUNDARY_BORDER_END_WAIT:
             ret = "wait(c)";
             break;
         default:

@@ -60,6 +60,8 @@ parser_reset(struct parser *p) {
     if(p->def != NULL) {
         p->state   = p->def->start_state;
     }
+    memset(&(p->e1), 0, sizeof(p->e1));
+    memset(&(p->e2), 0, sizeof(p->e2));
 }
 
 const struct parser_event *

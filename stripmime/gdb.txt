@@ -1,0 +1,2325 @@
+Reading symbols from stripmime...done.
+"/mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/mail0" is not a core dump: File format not recognized
+quit
++quit
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000004037d4 in parser_feed (p=0x608b60, c=13 '\r') at parser.c:76
+76	        const int when = state[i].when;
++bt
+#0  0x00000000004037d4 in parser_feed (p=0x608b60, c=13 '\r') at parser.c:76
+#1  0x000000000040113d in body (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:338
+#2  0x0000000000401730 in mime_msg (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:467
+#3  0x00000000004017f1 in pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:488
+#4  0x0000000000401c07 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:565
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000004037d4 in parser_feed (p=0x608b60, c=13 '\r') at parser.c:76
+76	        const int when = state[i].when;
++bt
+#0  0x00000000004037d4 in parser_feed (p=0x608b60, c=13 '\r') at parser.c:76
+#1  0x000000000040113d in body (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:338
+#2  0x0000000000401730 in mime_msg (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:467
+#3  0x00000000004017f1 in pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:488
+#4  0x0000000000401c07 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:565
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break body
+Breakpoint 1 at 0x401127: body. (2 locations)
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, body (ret=0x6089f8, c=100 'd') at mime_msg.c:110
+110	    ret->type    = MSG_BODY;
++n
+111	    ret->n       = 1;
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:body
+Breakpoint 1 at 0x401127: file stripmime.c, line 338.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:338
+warning: Source file is more recent than executable.
+338	    const struct parser_event* e = parser_feed(ctx->body, c);
++n
+340	        debug("2.        body", mime_body_event, e);
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:body
+Breakpoint 1 at 0x401127: file stripmime.c, line 338.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:338
+338	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608b60, c=100 'd') at parser.c:67
+67	    const unsigned type = p->classes[c];
++n
+69	    p->e1.next = p->e2.next = 0;
++n
+71	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+72	    const size_t n                              = p->def->states_n[p->state];
++n
+73	    bool matched   = false;
++n
+75	    for(unsigned i = 0; i < n ; i++) {
++n
+76	        const int when = state[i].when;
++n
+77	        if (state[i].when <= 0xFF) {
++n
+79	        } else if(state[i].when == ANY) {
++n
+80	            matched = true;
++n
+87	        if(matched) {
++n
+88	            state[i].act1(&p->e1, c);
++s
+unexpected (ret=0x608b78, c=100 'd') at mime_body.c:53
+53	    ret->type    = BODY_UNEXPECTED;
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:body
+Breakpoint 1 at 0x401127: file stripmime.c, line 338.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:338
+338	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608b60, c=100 'd') at parser.c:67
+67	    const unsigned type = p->classes[c];
++n
+69	    p->e1.next = p->e2.next = 0;
++n
+71	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+72	    const size_t n                              = p->def->states_n[p->state];
++n
+73	    bool matched   = false;
++n
+75	    for(unsigned i = 0; i < n ; i++) {
++n
+76	        const int when = state[i].when;
++n
+77	        if (state[i].when <= 0xFF) {
++n
+79	        } else if(state[i].when == ANY) {
++s
+80	            matched = true;
++p *p
+$1 = {classes = 0x606320 <classes>, def = 0x6061a0 <definition>, state = 0, e1 = {type = 0, 
+    data = "\000\000", n = 0 '\000', next = 0x0}, e2 = {type = 0, data = "\000\000", n = 0 '\000', 
+    next = 0x0}}
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime
+Function "stripmime" not defined.
+EOF [assumed N]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:body
+Breakpoint 1 at 0x401127: file stripmime.c, line 338.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:338
+338	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608b60, c=100 'd') at parser.c:67
+67	    const unsigned type = p->classes[c];
++n
+69	    p->e1.next = p->e2.next = 0;
++n
+71	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+72	    const size_t n                              = p->def->states_n[p->state];
++n
+73	    bool matched   = false;
++p *state
+$1 = {when = 512, dest = 2, act1 = 0x40342c <unexpected>, act2 = 0x0}
++p p->state
+$2 = 0
++p n
+$3 = 1
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:boundary_border
+Breakpoint 1 at 0x400f76: file stripmime.c, line 282.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=116 't') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+[Inferior 1 (process 814) exited normally]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:boundary_border
+Breakpoint 1 at 0x400f76: file stripmime.c, line 282.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=116 't') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++n
+284	        debug("3. boun_border", parser_utils_strcmpi_event, e);
++p e
+$1 = (const struct parser_event *) 0x608bf8
++p *e
+$2 = {type = 1, data = "y\000", n = 1 '\001', next = 0x0}
+Quit
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:boundary_border
+Breakpoint 1 at 0x400f76: file stripmime.c, line 282.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=116 't') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++n
+284	        debug("3. boun_border", parser_utils_strcmpi_event, e);
++p *e
+$1 = {type = 1, data = "y\000", n = 1 '\001', next = 0x0}
++n
+285	        switch(e->type) {
++n
+287	                ctx->msg_boundary_border_detected = &T;
++n
+288	                break;
++n
+293	        e = e->next;
++p *e
+$2 = {type = 1, data = "y\000", n = 1 '\001', next = 0x0}
++n
+294	              parser_reset(ctx->boundary_border);
++n
+295	t(ctx->boundary_border);
++n
+body (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:342
+342	    if(ctx->msg_boundary_border_detected == NULL) {
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:boundary_border
+Breakpoint 1 at 0x400f76: file stripmime.c, line 282.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=116 't') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++c
+Continuing.
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++s
+parser_feed (p=0x608b30, c=121 'y') at parser.c:67
+67	    const unsigned type = p->classes[c];
++s
+69	    p->e1.next = p->e2.next = 0;
++s
+71	    const struct parser_state_transition *state = p->def->states[p->state];
++s
+72	    const size_t n                              = p->def->states_n[p->state];
++s
+73	    bool matched   = false;
++s
+75	    for(unsigned i = 0; i < n ; i++) {
++s
+76	        const int when = state[i].when;
++s
+77	        if (state[i].when <= 0xFF) {
++s
+78	            matched = (c == when);
++s
+87	        if(matched) {
++s
+88	            state[i].act1(&p->e1, c);
++s
+eq (ret=0x608b48, c=121 'y') at parser_utils.c:35
+35	    ret->type    = STRING_CMP_EQ;
++s
+36	    ret->n       = 1;
++s
+37	    ret->data[0] = c;
++s
+38	}
++s
+parser_feed (p=0x608b30, c=121 'y') at parser.c:89
+89	            if(state[i].act2 != NULL) {
++s
+93	            p->state = state[i].dest;
+Quit
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:444
+Breakpoint 1 at 0x4016e4: file stripmime.c, line 444.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+[Inferior 1 (process 1060) exited normally]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:444
+Breakpoint 1 at 0x4016e4: file stripmime.c, line 444.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+[Inferior 1 (process 1066) exited normally]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:444
+Breakpoint 1 at 0x4016e4: file stripmime.c, line 444.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:444
+444	                if((ctx->msg_content_transfer_field_detected != NULL
++n
+445	                && *ctx->msg_content_transfer_field_detected
++n
+450	                ctx->msg_content_type_field_detected     = NULL;
++n
+451	                ctx->msg_content_transfer_field_detected = NULL;
++n
+452	                ctx->msg_content_type_value_stored       = NULL;
++n
+453	                ctx->msg_boundary_name_detected          = NULL;
++n
+454	                ctx->msg_boundary_key_stored             = NULL;
++n
+455	                ctx->print_curr_char                     = &T;
++n
+457	                parser_reset(ctx->ctype_value);
++c
+Continuing.
+[Inferior 1 (process 1072) exited normally]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:444
+Breakpoint 1 at 0x4016e4: file stripmime.c, line 444.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+warning: Source file is more recent than executable.
+444	                if( ctx->msg_content_transfer_field_detected != NULL
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:444
+444	                if( ctx->msg_content_transfer_field_detected != NULL
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:406
+Breakpoint 1 at 0x4014e9: file stripmime.c, line 406.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:407
+warning: Source file is more recent than executable.
+407	                parser_reset(ctx->ctype_header);
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:407
+407	                parser_reset(ctx->ctype_header);
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:407
+407	                parser_reset(ctx->ctype_header);
++n
+408	                parser_reset(ctx->ctransfer_header);
++n
+409	                if( ctx->msg_content_transfer_field_detected != NULL
++s
+416	                break;
++p ctx->msg_content_transfer_field_detected 
+$1 = (_Bool *) 0x0
++p *ctx->msg_content_transfer_field_detected 
+Cannot access memory at address 0x0
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:172
+Breakpoint 1 at 0x400c4f: file stripmime.c, line 172.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+[Inferior 1 (process 1090) exited normally]
+quit
++quit
+Reading symbols from stripmime...done.
++break stripmime.c:167
+Breakpoint 1 at 0x400c0d: file stripmime.c, line 167.
+Quit
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:167
+warning: Source file is more recent than executable.
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++n
+169	        debug("2. ctransferhr", parser_utils_strcmpi_event, e);
++p e->type
+$1 = 0
++n
+170	        switch(e->type) {
++n
+178	        e = e->next;
++n
+179	    } while (e != NULL);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=116 't') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=116 't') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=116 't') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=115 's') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=102 'f') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++s
+parser_feed (p=0x6089b0, c=114 'r') at parser.c:69
+69	    const unsigned type = p->classes[c];
++n
+71	    p->e1.next = p->e2.next = 0;
++n
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+74	    const size_t n                              = p->def->states_n[p->state];
++n
+75	    bool matched   = false;
++n
+77	    for(unsigned i = 0; i < n ; i++) {
++n
+78	        const int when = state[i].when;
++n
+79	        if (state[i].when <= 0xFF) {
++n
+80	            matched = (c == when);
++n
+89	        if(matched) {
++n
+90	            state[i].act1(&p->e1, c);
++s
+may_eq (ret=0x6089c8, c=114 'r') at parser_utils.c:28
+28	    ret->type    = STRING_CMP_MAYEQ;
++n
+29	    ret->n       = 1;
++n
+30	    ret->data[0] = c;
++n
+31	}
++n
+parser_feed (p=0x6089b0, c=114 'r') at parser.c:91
+91	            if(state[i].act2 != NULL) {
++n
+95	            p->state = state[i].dest;
++n
+96	            break;
++n
+99	    return &p->e1;
++n
+100	}
++n
+content_transfer_header (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:169
+169	        debug("2. ctransferhr", parser_utils_strcmpi_event, e);
++n
+170	        switch(e->type) {
++c
+Continuing.
+
+Breakpoint 1, content_transfer_header (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:167
+167	    const struct parser_event* e = parser_feed(ctx->ctransfer_header, c);
++n
+169	        debug("2. ctransferhr", parser_utils_strcmpi_event, e);
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:448
+Breakpoint 1 at 0x401700: file stripmime.c, line 448.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:448
+448	                    printf("\033[1;35m: quoted-printable\r\n");
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:498
+Breakpoint 1 at 0x4018e7: file stripmime.c, line 498.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=115 's') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=115 's') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=32 ' ') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=69 'E') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=69 'E') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=32 ' ') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=108 'l') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=105 'i') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=47 '/') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=115 's') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=59 ';') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=32 ' ') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=61 '=') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=34 '"') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=34 '"') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=32 ' ') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=119 'w') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=119 'w') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=84 'T') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=82 'R') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=115 's') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=102 'f') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=69 'E') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=99 'c') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=105 'i') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=103 'g') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=58 ':') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=32 ' ') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=115 's') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=54 '6') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=52 '4') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++s
+515	    } while (e != NULL);
++s
+492	        debug("0.       multi", pop3_multi_event,  e);
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++s
+515	    } while (e != NULL);
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++p ctx->print_curr_char 
+$1 = (_Bool *) 0x606309 <F>
++p *ctx->print_curr_char 
+$2 = false
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=116 't') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=101 'e') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=109 'm') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=112 'p') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=98 'b') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=111 'o') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=117 'u') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=110 'n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=97 'a') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=114 'r') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=121 'y') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+505	                break;
++s
+514	        e = e->next;
++c
+Continuing.
+
+Breakpoint 1, pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:498
+498	                if( ctx->print_curr_char != NULL
++s
+499	                && *ctx->print_curr_char) {
++s
+500	                    for(int i = 0; i < e->n; i++) {
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break stripmime.c:475
+Breakpoint 1 at 0x4017f0: file stripmime.c, line 475.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:475
+475	                    body(ctx, e->data[i]);
++s
+body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:345
+345	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608ab0, c=100 'd') at parser.c:69
+69	    const unsigned type = p->classes[c];
++n
+71	    p->e1.next = p->e2.next = 0;
++n
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++s
+74	    const size_t n                              = p->def->states_n[p->state];
++s
+75	    bool matched   = false;
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++s
+80	            matched = (c == when);
++s
+89	        if(matched) {
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++s
+81	        } else if(state[i].when == ANY) {
++s
+83	        } else if(state[i].when > 0xFF) {
++s
+84	            matched = (type & when);
++s
+89	        if(matched) {
++s
+90	            state[i].act1(&p->e1, c);
++s
+value (ret=0x608ac8, c=100 'd') at mime_body.c:35
+35	    ret->type    = BODY_VALUE;
++s
+36	    ret->n       = 1;
++s
+37	    ret->data[0] = c;
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:475
+475	                    body(ctx, e->data[i]);
++s
+body (ctx=0x7ffffffece30, c=13 '\r') at stripmime.c:345
+345	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608ab0, c=13 '\r') at parser.c:69
+69	    const unsigned type = p->classes[c];
++s
+71	    p->e1.next = p->e2.next = 0;
++s
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++s
+74	    const size_t n                              = p->def->states_n[p->state];
++s
+75	    bool matched   = false;
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++s
+80	            matched = (c == when);
++s
+89	        if(matched) {
++s
+90	            state[i].act1(&p->e1, c);
++s
+wait (ret=0x608ac8, c=13 '\r') at mime_body.c:47
+47	    ret->type    = BODY_WAIT;
++s
+48	    ret->n       = 0;
++s
+49	}
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:475
+475	                    body(ctx, e->data[i]);
++s
+body (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:345
+345	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608ab0, c=10 '\n') at parser.c:69
+69	    const unsigned type = p->classes[c];
++s
+71	    p->e1.next = p->e2.next = 0;
++s
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++s
+74	    const size_t n                              = p->def->states_n[p->state];
++s
+75	    bool matched   = false;
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++s
+80	            matched = (c == when);
++s
+89	        if(matched) {
++s
+90	            state[i].act1(&p->e1, c);
++s
+value_cr (ret=0x608ac8, c=10 '\n') at mime_body.c:42
+42	    value(ret, '\r');
++s
+value (ret=0x608ac8, c=13 '\r') at mime_body.c:35
+35	    ret->type    = BODY_VALUE;
++s
+36	    ret->n       = 1;
++s
+37	    ret->data[0] = c;
++s
+38	}
++s
+value_cr (ret=0x608ac8, c=10 '\n') at mime_body.c:43
+43	}
++s
+parser_feed (p=0x608ab0, c=10 '\n') at parser.c:91
+91	            if(state[i].act2 != NULL) {
++s
+92	                p->e1.next = &p->e2;
++s
+93	                state[i].act2(&p->e2, c);
++s
+value (ret=0x608ad8, c=10 '\n') at mime_body.c:35
+35	    ret->type    = BODY_VALUE;
++s
+36	    ret->n       = 1;
++s
+37	    ret->data[0] = c;
++s
+38	}
++c
+Continuing.
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:475
+475	                    body(ctx, e->data[i]);
++s
+body (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:345
+345	    const struct parser_event* e = parser_feed(ctx->body, c);
++s
+parser_feed (p=0x608ab0, c=45 '-') at parser.c:69
+69	    const unsigned type = p->classes[c];
++s
+71	    p->e1.next = p->e2.next = 0;
++s
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++s
+74	    const size_t n                              = p->def->states_n[p->state];
++s
+75	    bool matched   = false;
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++p p->state 
+$1 = 0
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++p when
+$2 = 13
++s
+80	            matched = (c == when);
++p c
+$3 = 45 '-'
++s
+89	        if(matched) {
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+79	        if (state[i].when <= 0xFF) {
++p when
+$4 = 1024
++p c
+$5 = 45 '-'
++s
+81	        } else if(state[i].when == ANY) {
++s
+83	        } else if(state[i].when > 0xFF) {
++s
+84	            matched = (type & when);
++s
+89	        if(matched) {
++s
+90	            state[i].act1(&p->e1, c);
++s
+value (ret=0x608ac8, c=45 '-') at mime_body.c:35
+35	    ret->type    = BODY_VALUE;
++s
+36	    ret->n       = 1;
++s
+37	    ret->data[0] = c;
++s
+38	}
++s
+parser_feed (p=0x608ab0, c=45 '-') at parser.c:91
+91	            if(state[i].act2 != NULL) {
++s
+95	            p->state = state[i].dest;
++s
+96	            break;
++p p->state 
+$6 = 0
++s
+99	    return &p->e1;
++s
+100	}
++s
+body (ctx=0x7ffffffece30, c=45 '-') at stripmime.c:347
+347	        debug("2.        body", mime_body_event, e);
++n
+348	        switch(e->type) {
++s
+350	                if(ctx->boundaries_n > 0) {
++s
+351	                    if(ctx->msg_boundary_border_detected == NULL) {
++s
+352	                        for(int i = 0; i < e->n; i++) {
++s
+353	                            boundary_border(ctx, e->data[i]);
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000004038e5 in parser_feed (p=0x816a60, c=100 'd') at parser.c:78
+78	        const int when = state[i].when;
++bt
+#0  0x00000000004038e5 in parser_feed (p=0x816a60, c=100 'd') at parser.c:78
+#1  0x0000000000400fcc in boundary_border (ctx=0x7ffffffece30, c=100 'd')
+    at stripmime.c:282
+#2  0x00000000004012cc in body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:353
+#3  0x0000000000401901 in mime_msg (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:483
+#4  0x00000000004019d9 in pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:504
+#5  0x0000000000401def in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:581
++break 474
+No line 474 in the current file.
+EOF [assumed N]
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++break 474
+Breakpoint 1 at 0x4018a4: file stripmime.c, line 474.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, mime_msg (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:474
+474	                    ctx->boundary_border = parser_init(init_char_class(), &border_def);
++p *ctx->boundary_border
+$1 = {classes = 0x607320 <classes>, def = 0x7ffffffece10, state = 0, e1 = {type = 0, 
+    data = "\000\000", n = 0 '\000', next = 0x0}, e2 = {type = 0, data = "\000\000", 
+    n = 0 '\000', next = 0x0}}
++n
+480	                break;
++p *ctx->boundary_border
+$2 = {classes = 0x607320 <classes>, def = 0x7ffffffecd00, state = 0, e1 = {type = 0, 
+    data = "\000\000", n = 0 '\000', next = 0x0}, e2 = {type = 0, data = "\000\000", 
+    n = 0 '\000', next = 0x0}}
++p *ctx->boundary_border->def
+$3 = {states_count = 24, states = 0x8161f0, states_n = 0x8162c0, start_state = 0}
++for(st in *ctx->boundary_border->def->states_n)
+Expression not found
++p *ctx->boundary_border->def->states
+$4 = (const struct parser_state_transition *) 0x816390
++p *ctx->boundary_border->def->states[0]
+$5 = {when = 45, dest = 1, act1 = 0x402822 <may_eq>, act2 = 0x0}
++p *ctx->boundary_border->def->states[1]
+$6 = {when = 45, dest = 2, act1 = 0x402822 <may_eq>, act2 = 0x0}
++p *ctx->boundary_border->def->states[0][0]
+Structure has no component named operator*.
++p *ctx->boundary_border->def->states[0][1]
+Structure has no component named operator*.
++p *ctx->boundary_border->def->states[0]
+$7 = {when = 45, dest = 1, act1 = 0x402822 <may_eq>, act2 = 0x0}
++p *ctx->boundary_border->def
+$8 = {states_count = 24, states = 0x8161f0, states_n = 0x8162c0, start_state = 0}
++p *ctx->boundary_border->def->states[24]
+Cannot access memory at address 0x0
++p *ctx->boundary_border->def->states[23]
+$9 = {when = 512, dest = 23, act1 = 0x40287c <neq>, act2 = 0x0}
++p *ctx->boundary_border->def->states[21]
+$10 = {when = 100, dest = 22, act1 = 0x40284f <eq>, act2 = 0x0}
++p *ctx->boundary_border->def->states[20]
+$11 = {when = 100, dest = 21, act1 = 0x402822 <may_eq>, act2 = 0x0}
++p *ctx->boundary_border->def->states[22]
+$12 = {when = 512, dest = 23, act1 = 0x40287c <neq>, act2 = 0x0}
++p *ctx->boundary_border->def->states_n
+$13 = 3
++p *ctx->boundary_border->def->states_n[0]
+Cannot access memory at address 0x3
++p *ctx->boundary_border->def
+$14 = {states_count = 24, states = 0x8161f0, states_n = 0x8162c0, start_state = 0}
++p ctx->boundary_border->def->states_n[0]
+$15 = 3
++p ctx->boundary_border->def->states_n[1]
+$16 = 3
++p ctx->boundary_border->def->states_n[24]
+$17 = 0
++p ctx->boundary_border->def->states_n[25]
+$18 = 1745
++p ctx->boundary_border->def->states_n[23]
+$19 = 1
++p ctx->boundary_border->def->states_n[22]
+$20 = 1
++p ctx->boundary_border->def->states_n[21]
+$21 = 3
++s
+491	        e = e->next;
++s
+492	    } while (e != NULL);
++s
+493	}
++s
+pop3_multi (ctx=0x7ffffffece30, c=10 '\n') at stripmime.c:503
+503	                for(int i = 0; i < e->n; i++) {
++s
+506	                if( ctx->print_curr_char != NULL
++s
+507	                && *ctx->print_curr_char) {
++s
+513	                break;
++s
+522	        e = e->next;
++s
+523	    } while (e != NULL);
++s
+524	}
++s
+main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:580
+580	        for(ssize_t j = 0; j < n ; j++) {
++s
+581	            pop3_multi(&ctx, data[j]);
++s
+pop3_multi (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:498
+498	    const struct parser_event* e = parser_feed(ctx->multi, c);
++n
+500	        debug("0.       multi", pop3_multi_event,  e);
++n
+501	        switch (e->type) {
++s
+503	                for(int i = 0; i < e->n; i++) {
++s
+504	                    mime_msg(ctx, e->data[i]);
++s
+mime_msg (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:380
+380	mime_msg(struct ctx *ctx, const uint8_t c) {
++n
+381	    const struct parser_event* e = parser_feed(ctx->msg, c);
++n
+384	        debug("1.         msg", mime_msg_event, e);
++n
+385	        switch(e->type) {
++s
+482	                for(int i = 0; i < e->n; i++) {
++s
+483	                    body(ctx, e->data[i]);
++s
+body (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:345
+345	    const struct parser_event* e = parser_feed(ctx->body, c);
++n
+347	        debug("2.        body", mime_body_event, e);
++n
+348	        switch(e->type) {
++s
+350	                if(ctx->boundaries_n > 0) {
++s
+351	                    if(ctx->msg_boundary_border_detected == NULL) {
++s
+352	                        for(int i = 0; i < e->n; i++) {
++s
+353	                            boundary_border(ctx, e->data[i]);
++s
+boundary_border (ctx=0x7ffffffece30, c=100 'd') at stripmime.c:282
+282	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++s
+parser_feed (p=0x816a60, c=100 'd') at parser.c:69
+69	    const unsigned type = p->classes[c];
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000401ea0 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:591
+591	        ctx.blacklist[i] = calloc(1024, sizeof(char));
++bt
+#0  0x0000000000401ea0 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:591
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403aa3 in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+78	        const int when = state[i].when;
++bt
+#0  0x0000000000403aa3 in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+#1  0x0000000000401112 in boundary_border (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:297
+#2  0x0000000000401412 in body (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:368
+#3  0x00000000004019e0 in mime_msg (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:498
+#4  0x0000000000401ab8 in pop3_multi (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:519
+#5  0x0000000000401fad in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:606
++run mail0
+`/mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime' has changed; re-reading symbols.
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000400b0c in to_filter (ctx=0x60dbd0) at stripmime.c:120
+warning: Source file is more recent than executable.
+120	    char *content_type = ctx->content_types[ctx->content_types_n-1];
++bt
+#0  0x0000000000400b0c in to_filter (ctx=0x60dbd0) at stripmime.c:120
+#1  0x00000000004015b6 in mime_msg (ctx=0x7ffffffece20, c=99 'c') at stripmime.c:409
+#2  0x0000000000401b1f in pop3_multi (ctx=0x7ffffffece20, c=99 'c') at stripmime.c:519
+#3  0x0000000000401f2b in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:596
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000400b0c in to_filter (ctx=0x60dbd0) at stripmime.c:120
+warning: Source file is more recent than executable.
+120	    char *content_type = ctx->content_types[ctx->content_types_n-1];
++bt
+#0  0x0000000000400b0c in to_filter (ctx=0x60dbd0) at stripmime.c:120
+#1  0x00000000004015b6 in mime_msg (ctx=0x7ffffffece20, c=99 'c') at stripmime.c:409
+#2  0x0000000000401b1f in pop3_multi (ctx=0x7ffffffece20, c=99 'c') at stripmime.c:519
+#3  0x0000000000401f2b in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:596
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403abb in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+78	        const int when = state[i].when;
++bt
+#0  0x0000000000403abb in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+#1  0x000000000040112a in boundary_border (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:300
+#2  0x000000000040142a in body (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:371
+#3  0x00000000004019f8 in mime_msg (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:501
+#4  0x0000000000401ad0 in pop3_multi (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:522
+#5  0x0000000000401fc5 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:608
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403abb in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+78	        const int when = state[i].when;
++bt
+#0  0x0000000000403abb in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+#1  0x000000000040112a in boundary_border (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:300
+#2  0x000000000040142a in body (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:371
+#3  0x00000000004019f8 in mime_msg (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:501
+#4  0x0000000000401ad0 in pop3_multi (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:522
+#5  0x0000000000401fc5 in main (argc=2, argv=0x7ffffffedfe8) at stripmime.c:608
++break stripmime.c:boundary_border
+Breakpoint 1 at 0x401114: file stripmime.c, line 300.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:300
+300	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++s
+parser_feed (p=0x91ca70, c=100 'd') at parser.c:69
+69	    const unsigned type = p->classes[c];
++n
+71	    p->e1.next = p->e2.next = 0;
++n
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+74	    const size_t n                              = p->def->states_n[p->state];
++n
+75	    bool matched   = false;
++s
+77	    for(unsigned i = 0; i < n ; i++) {
++s
+78	        const int when = state[i].when;
++s
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000403abb in parser_feed (p=0x91ca70, c=100 'd') at parser.c:78
+78	        const int when = state[i].when;
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+
+Breakpoint 1, boundary_border (ctx=0x7ffffffece20, c=100 'd') at stripmime.c:300
+300	    const struct parser_event* e = parser_feed(ctx->boundary_border, c);
++s
+parser_feed (p=0x91ca70, c=100 'd') at parser.c:69
+69	    const unsigned type = p->classes[c];
++n
+71	    p->e1.next = p->e2.next = 0;
++n
+73	    const struct parser_state_transition *state = p->def->states[p->state];
++n
+74	    const size_t n                              = p->def->states_n[p->state];
++n
+75	    bool matched   = false;
++n
+77	    for(unsigned i = 0; i < n ; i++) {
++n
+78	        const int when = state[i].when;
++p state[i].when
+Cannot access memory at address 0x100006400000000
++p state[i]
+Cannot access memory at address 0x100006400000000
++p state[0]
+Cannot access memory at address 0x100006400000000
++p state[2]
+Cannot access memory at address 0x100006400000030
++p state[1]
+Cannot access memory at address 0x100006400000018
++p *p
+$1 = {classes = 0x607320 <classes>, def = 0x7ffffffeccf0, state = 0, e1 = {type = 0, 
+    data = "\000\000", n = 0 '\000', next = 0x0}, e2 = {type = 0, data = "\000\000", 
+    n = 0 '\000', next = 0x0}}
++p *p->def
+$2 = {states_count = 24, states = 0x609908, states_n = 0x403e2a <pop3_multi_event>, 
+  start_state = 4211168}
++p *p->def->states
+$3 = (const struct parser_state_transition *) 0x100006400000000
++p *p->def->states[0]
+Cannot access memory at address 0x100006400000000
++p *p->def
+$4 = {states_count = 24, states = 0x609908, states_n = 0x403e2a <pop3_multi_event>, 
+  start_state = 4211168}
++p *p->def->states
+$5 = (const struct parser_state_transition *) 0x100006400000000
++p **p->def->states
+Cannot access memory at address 0x100006400000000
+quit
++quit
+EOF [assumed Y]
+Reading symbols from stripmime...done.
++run mail0
+Starting program: /mnt/c/Users/sebas/Desktop/pc-2018b-07/master/stripmime/stripmime mail0
+[Inferior 1 (process 1478) exited normally]
+quit
++quit

@@ -10,6 +10,8 @@ init_char_class(void) {
 
         if(i <= 127) {
             class |= TOKEN_CHAR;
+        } else if(i <= 255) {
+            class |= TOKEN_EXTENDED_CHAR;
         }
 
         // 'A' - 'Z'

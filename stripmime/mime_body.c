@@ -1,6 +1,6 @@
 #include "parser.h"
 #include "mime_chars.h"
-#include "mime_ctransfer_value.h"
+#include "mime_body.h"
 
 /**
  * RFC822:
@@ -22,7 +22,9 @@
  *                                             ; CRLF => folding
  */
 enum state {
-    VALUE,
+    BODY,
+    BODY_CR,
+    ERROR,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -30,14 +32,25 @@ enum state {
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
-    ret->type    = CTRANSFER_VALUE;
+    ret->type    = BODY_VALUE;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
+value_cr(struct parser_event *ret, const uint8_t c) {
+    value(ret, '\r');
+}
+
+static void
+wait(struct parser_event *ret, const uint8_t c) {
+    ret->type    = BODY_WAIT;
+    ret->n       = 0;
+}
+
+static void
 unexpected(struct parser_event *ret, const uint8_t c) {
-    ret->type    = CTRANSFER_UNEXPECTED;
+    ret->type    = BODY_UNEXPECTED;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -45,44 +58,64 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_VALUE[] =  {
-        {.when = ANY,        .dest = VALUE,         .act1 = value,},
+static const struct parser_state_transition ST_BODY[] =  {
+    {.when = '\r',                 .dest = BODY_CR,       .act1 = wait,      },
+    {.when = TOKEN_CHAR,           .dest = BODY,          .act1 = value,     },
+    {.when = TOKEN_EXTENDED_CHAR,  .dest = BODY,          .act1 = value,     },
+    {.when = ANY,                  .dest = ERROR,         .act1 = unexpected,},
+};
+
+static const struct parser_state_transition ST_BODY_CR[] =  {
+    {.when = '\n',       .dest = BODY,         .act1 = value_cr,
+                                               .act2 = value,     },
+    {.when = ANY,        .dest = ERROR,        .act1 = unexpected,},
+};
+
+static const struct parser_state_transition ST_ERROR[] =  {
+    {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
 static const struct parser_state_transition *states [] = {
-        ST_VALUE,
+        ST_BODY,
+        ST_BODY_CR,
+        ST_ERROR,
 };
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 static const size_t states_n [] = {        
-        N(ST_VALUE),
+        N(ST_BODY),
+        N(ST_BODY_CR),
+        N(ST_ERROR),
 };
 
 static struct parser_definition definition = {
         .states_count = N(states),
         .states       = states,
         .states_n     = states_n,
-        .start_state  = VALUE,
+        .start_state  = BODY,
 };
 
 const struct parser_definition *
-mime_ctransfer_value_parser(void) {
+mime_body_parser(void) {
     return &definition;
 }
 
 const char *
-mime_ctransfer_value_event(enum mime_ctransfer_value_event_type type) {
+mime_body_event(enum mime_body_event_type type) {
     const char *ret;
 
     switch(type) {
-        case CTRANSFER_VALUE:
-            ret = "value(c)";
+        case BODY_VALUE:
+            ret = "body(c)";
             break;
-        case CTRANSFER_UNEXPECTED:
+        case BODY_WAIT:
+            ret = "wait(c)";
+            break;
+        case BODY_UNEXPECTED:
             ret = "error(c)";
             break;
         default:

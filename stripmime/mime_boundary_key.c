@@ -31,21 +31,21 @@ enum state {
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_KEY_VALUE;
+    ret->type    = BOUNDARY_KEY_VALUE;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 fin(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_KEY_VALUE_END;
+    ret->type    = BOUNDARY_KEY_VALUE_END;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 unexpected(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_BOUNDARY_KEY_UNEXPECTED;
+    ret->type    = BOUNDARY_KEY_UNEXPECTED;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -95,13 +95,13 @@ mime_boundary_key_event(enum mime_boundary_key_event_type type) {
     const char *ret;
 
     switch(type) {
-        case MIME_BOUNDARY_KEY_VALUE:
+        case BOUNDARY_KEY_VALUE:
             ret = "value(c)";
             break;
-        case MIME_BOUNDARY_KEY_VALUE_END:
+        case BOUNDARY_KEY_VALUE_END:
             ret = "value_end(\")";
             break;
-        case MIME_BOUNDARY_KEY_UNEXPECTED:
+        case BOUNDARY_KEY_UNEXPECTED:
             ret = "unexpected(c)";
             break;
         default:

@@ -1,5 +1,5 @@
-#ifndef MIME_MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4de
-#define MIME_MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4de
+#ifndef MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4de
+#define MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4de
 
 /**
  * mime_boundary_key.c - tokenizador de valor de boundary.
@@ -12,13 +12,13 @@ struct parser;
 enum mime_boundary_key_event_type {
     
     /* leyendo el valor de boundary */
-    MIME_BOUNDARY_KEY_VALUE,
+    BOUNDARY_KEY_VALUE,
     
     /* se termino de leer el valor de boundary. payload: caracter. */
-    MIME_BOUNDARY_KEY_VALUE_END,
+    BOUNDARY_KEY_VALUE_END,
 
     /* se recibió un caracter que no se esperaba */
-    MIME_BOUNDARY_KEY_UNEXPECTED,
+    BOUNDARY_KEY_UNEXPECTED,
 };
 
 /** la definición del parser */

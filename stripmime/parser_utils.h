@@ -15,8 +15,6 @@ enum string_cmp_event_types {
     STRING_CMP_EQ,
     /** NO hay posibilidades de que el string sea igual */
     STRING_CMP_NEQ,
-    /** post analisis de un string que es igual */
-    STRING_CMP_EQ_POST,
 };
 
 const char *

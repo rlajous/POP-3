@@ -1,0 +1,30 @@
+Message-ID: <1509896531.21636.1.camel@itba.edu.ar>
+Subject: Archivo grande
+From: "Juan F. Codagnone" <jcodagno@itba.edu.ar>
+To: jcodagnone@itba.edu.ar
+Content-Type: multipart/mixed; boundary="=-PJ7raRLZ7SgpoxscB+sr"
+Date: Sun, 05 Nov 2017 12:42:11 -0300
+Mime-Version: 1.0
+
+--=-PJ7raRLZ7SgpoxscB+sr
+Content-Type: multipart/alternative; boundary="=-hNdmJb7iMFb3uB54pJ63"
+
+
+--=-hNdmJb7iMFb3uB54pJ63
+Content-Type: text/plain
+Content-Transfer-Encoding: 8bit
+
+Adjunto un archivo.
+--=-hNdmJb7iMFb3uB54pJ63
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+<html><head></head><body>Adjunto un archivo.</body></html>
+--=-hNdmJb7iMFb3uB54pJ63--
+
+--=-PJ7raRLZ7SgpoxscB+sr
+Content-Type: application/x-cd-image; name="Fedora-Server-netinst-x86_64-26-1.5.iso"
+Content-Description: un archivo grande
+Content-Disposition: attachment; filename="Fedora-Server-netinst-x86_64-26-1.5.iso"
+Content-Transfer-Encoding: base64
+

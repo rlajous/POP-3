@@ -44,13 +44,6 @@ neq(struct parser_event *ret, const uint8_t c) {
     ret->data[0] = c;
 }
 
-static void
-eq_post(struct parser_event *ret, const uint8_t c) {
-    ret->type    = STRING_CMP_EQ_POST;
-    ret->n       = 1;
-    ret->data[0] = c;
-}
-
 /*
  * para comparar "foo" (length 3) necesitamos 3 + 2 estados.
  * Los útimos dos, son el sumidero de comparación fallida, y
@@ -83,9 +76,9 @@ struct parser_definition
 parser_utils_strcmpi(const char *s) {
     const size_t n = strlen(s);
 
-    struct parser_state_transition **states     = calloc(n + 3, sizeof(*states));
-    size_t *nstates                             = calloc(n + 3, sizeof(*nstates));
-    struct parser_state_transition *transitions = calloc(3 * (n + 3),
+    struct parser_state_transition **states     = calloc(n + 2, sizeof(*states));
+    size_t *nstates                             = calloc(n + 2, sizeof(*nstates));
+    struct parser_state_transition *transitions = calloc(3 *(n + 2),
                                                         sizeof(*transitions));
     if(states == NULL || nstates == NULL || transitions == NULL) {
         free(states);
@@ -102,9 +95,8 @@ parser_utils_strcmpi(const char *s) {
     }
 
     // estados fijos
-    const size_t st_eq      = n;
-    const size_t st_neq     = n + 1;
-    const size_t st_eq_post = n + 2;
+    const size_t st_eq  = n;
+    const size_t st_neq = n + 1;
 
     for(size_t i = 0; i < n; i++) {
         const size_t dest = (i + 1 == n) ? st_eq : i + 1;
@@ -123,8 +115,8 @@ parser_utils_strcmpi(const char *s) {
     }
     // EQ
     transitions[(n + 0) * 3].when   = ANY;
-    transitions[(n + 0) * 3].dest   = st_eq_post;
-    transitions[(n + 0) * 3].act1   = eq_post;
+    transitions[(n + 0) * 3].dest   = st_neq;
+    transitions[(n + 0) * 3].act1   = neq;
     states     [(n + 0)]            = transitions + ((n + 0) * 3 + 0);
     nstates    [(n + 0)]            = 1;
     // NEQ
@@ -133,12 +125,6 @@ parser_utils_strcmpi(const char *s) {
     transitions[(n + 1) * 3].act1   = neq;
     states     [(n + 1)]            = transitions + ((n + 1) * 3 + 0);
     nstates    [(n + 1)]            = 1;
-    // EQ_POST
-    transitions[(n + 2) * 3].when   = ANY;
-    transitions[(n + 2) * 3].dest   = st_eq_post;
-    transitions[(n + 2) * 3].act1   = eq_post;
-    states     [(n + 2)]            = transitions + ((n + 2) * 3 + 0);
-    nstates    [(n + 2)]            = 1;
 
 
     struct parser_definition def = {

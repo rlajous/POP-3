@@ -1,5 +1,5 @@
-#ifndef MIME_MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4dd
-#define MIME_MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4dd
+#ifndef MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4dd
+#define MSG_H_be03ad0cccde0231647a6c699e44f0d753baf4dd
 
 /**
  * mime_value.c - tokenizador generico de valores que terminan en ';'.
@@ -12,16 +12,16 @@ struct parser;
 enum mime_value_event_type {
     
     /* leyendo el valor */
-    MIME_VALUE,
+    VALUE,
     
     /* se termino de leer el value. payload: caracter. */
-    MIME_VALUE_END,
+    VALUE_END,
     
     /* no tenemos idea de qué hacer hasta que venga el proximo caracter */
-    MIME_WAIT,
+    WAIT,
 
     /* se recibió un caracter que no se esperaba */
-    MIME_UNEXPECTED,
+    UNEXPECTED,
 };
 
 /** la definición del parser */

@@ -91,6 +91,7 @@ enum mime_char_class {
     TOKEN_REST_NAME_FIRST   = 1 << 23,
     TOKEN_REST_NAME_CHARS   = 1 << 24,
     TOKEN_TSPECIAL          = 1 << 25,
+    TOKEN_EXTENDED_CHAR     = 1 << 26,
 };
 
 /**

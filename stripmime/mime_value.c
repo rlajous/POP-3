@@ -22,8 +22,8 @@
  *                                             ; CRLF => folding
  */
 enum state {
-    VALUE0,
-    VALUE,
+    MIME_VALUE0,
+    MIME_VALUE,
     ERROR,
 };
 
@@ -32,28 +32,28 @@ enum state {
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_VALUE;
+    ret->type    = VALUE;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 fin(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_VALUE_END;
+    ret->type    = VALUE_END;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 wait(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_WAIT; // Un estado que no hace nada, puede no existir
+    ret->type    = WAIT; // Un estado que no hace nada, puede no existir
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 unexpected(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_UNEXPECTED;
+    ret->type    = UNEXPECTED;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -63,15 +63,15 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 
 static const struct parser_state_transition ST_VALUE0[] =  {
         {.when = ';',        .dest = ERROR,         .act1 = unexpected,},
-        {.when = TOKEN_LWSP, .dest = VALUE0,        .act1 = wait,      },
-        {.when = TOKEN_CHAR, .dest = VALUE,         .act1 = value,     },
+        {.when = TOKEN_LWSP, .dest = MIME_VALUE0,   .act1 = wait,      },
+        {.when = TOKEN_CHAR, .dest = MIME_VALUE,    .act1 = value,     },
         {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
 static const struct parser_state_transition ST_VALUE[] =  {
-        {.when = ';',        .dest = VALUE,         .act1 = fin,       },
-        {.when = TOKEN_LWSP, .dest = VALUE,         .act1 = value,     },
-        {.when = TOKEN_CHAR, .dest = VALUE,         .act1 = value,     },
+        {.when = ';',        .dest = MIME_VALUE,    .act1 = fin,       },
+        {.when = TOKEN_LWSP, .dest = MIME_VALUE,    .act1 = value,     },
+        {.when = TOKEN_CHAR, .dest = MIME_VALUE,    .act1 = value,     },
         {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
@@ -100,7 +100,7 @@ static struct parser_definition definition = {
         .states_count = N(states),
         .states       = states,
         .states_n     = states_n,
-        .start_state  = VALUE0,
+        .start_state  = MIME_VALUE0,
 };
 
 const struct parser_definition *
@@ -113,16 +113,16 @@ mime_value_event(enum mime_value_event_type type) {
     const char *ret;
 
     switch(type) {
-        case MIME_VALUE:
+        case VALUE:
             ret = "value(c)";
             break;
-        case MIME_VALUE_END:
+        case VALUE_END:
             ret = "value_end(c)";
             break;
-        case MIME_WAIT:
+        case WAIT:
             ret = "wait(c)";
             break;
-        case MIME_UNEXPECTED:
+        case UNEXPECTED:
             ret = "error(c)";
             break;
         default:

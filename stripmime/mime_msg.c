@@ -39,7 +39,7 @@ enum state {
 
 static void
 name(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_NAME;
+    ret->type    = MSG_NAME;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -51,14 +51,14 @@ name_cr(struct parser_event *ret, const uint8_t c) {
 
 static void
 name_end(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_NAME_END;
+    ret->type    = MSG_NAME_END;
     ret->n       = 1;
     ret->data[0] = ':';
 }
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_VALUE;
+    ret->type    = MSG_VALUE;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -70,7 +70,7 @@ value_cr(struct parser_event *ret, const uint8_t c) {
 
 static void
 value_fold_crlf(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_VALUE_FOLD;
+    ret->type    = MSG_VALUE_FOLD;
     ret->n       = 2;
     ret->data[0] = '\r';
     ret->data[1] = '\n';
@@ -78,14 +78,14 @@ value_fold_crlf(struct parser_event *ret, const uint8_t c) {
 
 static void
 value_fold(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_VALUE_FOLD;
+    ret->type    = MSG_VALUE_FOLD;
     ret->n       = 1;
     ret->data[0] = c ;
 }
 
 static void
 value_end(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_VALUE_END;
+    ret->type    = MSG_VALUE_END;
     ret->n       = 2;
     ret->data[0] = '\r';
     ret->data[1] = '\n';
@@ -93,13 +93,13 @@ value_end(struct parser_event *ret, const uint8_t c) {
 
 static void
 wait(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_WAIT;
+    ret->type    = MSG_WAIT;
     ret->n       = 0;
 }
 
 static void
 body_start(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_BODY_START;
+    ret->type    = MSG_BODY_START;
     ret->n       = 2;
     ret->data[0] = '\r';
     ret->data[1] = '\n';
@@ -107,14 +107,14 @@ body_start(struct parser_event *ret, const uint8_t c) {
 
 static void
 body(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_BODY;
+    ret->type    = MSG_BODY;
     ret->n       = 1;
     ret->data[0] = c;
 }
 
 static void
 unexpected(struct parser_event *ret, const uint8_t c) {
-    ret->type    = MIME_MSG_UNEXPECTED;
+    ret->type    = MSG_UNEXPECTED;
     ret->n       = 1;
     ret->data[0] = c;
 }
@@ -236,31 +236,31 @@ mime_msg_event(enum mime_msg_event_type type) {
     const char *ret;
 
     switch(type) {
-        case MIME_MSG_NAME:
+        case MSG_NAME:
           ret = "name(c)";
           break;
-        case MIME_MSG_NAME_END:
+        case MSG_NAME_END:
             ret = "name_end(':')";
             break;
-        case MIME_MSG_VALUE:
+        case MSG_VALUE:
             ret = "value(c)";
             break;
-        case MIME_MSG_VALUE_FOLD:
+        case MSG_VALUE_FOLD:
             ret = "value_fold(c)";
             break;
-        case MIME_MSG_VALUE_END:
+        case MSG_VALUE_END:
             ret = "value_end(CRLF)";
             break;
-        case MIME_MSG_BODY_START:
+        case MSG_BODY_START:
             ret = "start_body(c)";
             break;
-        case MIME_MSG_BODY:
+        case MSG_BODY:
             ret = "body(c)";
             break;
-        case MIME_MSG_WAIT:
+        case MSG_WAIT:
             ret = "wait()";
             break;
-        case MIME_MSG_UNEXPECTED:
+        case MSG_UNEXPECTED:
             ret = "unexpected(c)";
             break;
         default:
