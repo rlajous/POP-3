@@ -54,15 +54,15 @@ Copyright Notice
 
 
 Delgado, et al.            Expires May 7, 2019                  [Page 1]
-
+
 Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
 
 
-1.  Introducción
+1.  Aplicaciones y protocolos desarrollados
 
-2.  El protocolo SPCP
+1.1.  El protocolo SPCP
 
-2.1.  introducción al protocolo
+1.1.1.  introducción al protocolo
 
    El Simple Proxy Communication Protocol(SPCP) es un protocolo binario
    utilizado para poder configurar y obtener métricas de un servidor
@@ -70,7 +70,7 @@ Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
    permitiendo que sea implementado lo mas fácilmente posible siempre y
    cuando no comprometa el objetivo principal de administrar el proxy
 
-2.2.  Operación Básica
+1.1.2.  Operación Básica
 
    Inicialmente, el servidor spcp inicializa su servicio escuchando en
    el puerto 9090 por default para aceptar conexiones sctp entrantes.
@@ -88,21 +88,21 @@ Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
    al servidor que el cliente desea finalizar su sesión y el servidor da
    por finalizada la sesión.
 
-2.3.  El request
+1.1.3.  El request
 
    La estructura de un request
 
-   +-----+-------+----------+----------+...+----------+----------+
-   | CMD | NARGS | ARGLEN 1  |  ARG 1  |   | ARGLEN N |   ARG N  |
-   +-----+-------+----------+----------+...+----------+----------+
-   |  1  |   1   |    1     | Variable |   |    1     | Variable |
-   +-----+-------+----------+----------+...+----------+----------+
+     +-----+-------+----------+----------+...+----------+----------+
+     | CMD | NARGS | ARGLEN 1 |  ARG 1   |   | ARGLEN N |   ARG N  |
+     +-----+-------+----------+----------+...+----------+----------+
+     |  1  |   1   |    1     | Variable |   |    1     | Variable |
+     +-----+-------+----------+----------+...+----------+----------+
 
    El request se compone por un numero variable de segmentos, estos son:
 
-      CMD: El identificador de comando, tiene un tamaño de un byte
+      CMD: El identificador de comando, tiene un tamaño de un byte.
 
-      NARGS: La cantidad de argumentos, tiene tamaño de un byte
+      NARGS: La cantidad de argumentos, tiene tamaño de un byte.
 
 
 
@@ -110,22 +110,263 @@ Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
 
 
 Delgado, et al.            Expires May 7, 2019                  [Page 2]
-
+
 Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
 
 
       ARGLEN: Cada argumento se encuentra precedido por el largo del
       mismo, este tiene un maximo de 255 ya que este campo tiene un byte
-      de longitud
+      de longitud.
 
       ARG: El argumento de tamaño anteriormente especificado, los
-      argumentos son representaciones ASCII
+      argumentos son representaciones ASCII.
 
-2.4.  Estado de autenticación
+1.1.4.  La Response
 
-2.5.  Estado de transacción
+   La estructura de un response
 
-3.  References
+                 +-------------+---------+----------+
+                 | STATUS_CODE | DATALEN |   DATA   |
+                 +-------------+---------+----------+
+                 |      1      |    1    | Variable |
+                 +-------------+---------+----------+
+
+   El response se compone por un numero variable de segmentos, estos
+   son:
+
+      STATUS_CODE: Identifica el codigo de la respuesta.
+
+      DATALEN: La longitud de los datos de la respuesta del servidor.
+
+      DATA: Los datos enviados por el servidor, estos se encuentran en
+      codificación ASCII.
+
+1.1.4.1.  Codigos de respuesta
+
+   Discutimos brevemente los posibles codigos de respuesta que un
+   servidor puede enviar a un cliente
+
+      0x00: es el response de OK, indica que el request se ejecuto con
+      exito por parte del servidor.
+
+      0x01: Error de autenticación, indica que hubo un error al tratar
+      de autenticar el usuario.
+
+      0x02: Comando invalido, el comando que se envio en el request no
+      es un comando valido.
+
+      0x03: Argumentos invalidoos, indica que los argumentos para el
+      comando no son validos.
+
+      0x04: Error general, es el error de fallback del servidor cuando
+      no puede especificar por que fallo.
+
+
+
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 3]
+
+Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
+
+
+1.1.5.  Estado de autenticación
+
+   Una vez inicializada la conexión el servidor se encuentra en el
+   estado de autenticación.  El cliente debe proveer su usuario mediante
+   el comando 0x00, al cual llamaremos USER.
+
+   El comando USER se compone de la siguiente manera:
+
+      Argumentos: uno, la representación ASCII del nombre de usuario.
+
+      Restricciones: Solo se puede utilizar en el estado de
+      autenticación una vez inicializada la conexión o inmediatamente
+      despues de un USER o PASS erróneo.
+
+      Discusión: Primero se debe mandar el comando USER, si el usuario
+      esta registrado entonces el servidor responde con una respuesta
+      positiva mandando el byte 0x00.  En caso contrario respondera con
+      un 0x01 (AUTH ERROR)
+
+   Inmediatamente despues del comando USER debe proveer mediante otro
+   request la contraseña asociada al usuario.  Para esto emite un
+   request al servidor con el comando 0x01, al cual le llamaremos PASS
+   de ahora en adelante.
+
+   El comando PASS se compone de la siguiente manera:
+
+      Argumentos: uno, la representación ASCII de la contraseña.
+
+      Restricciones: Solo se puede utilizar en el estado de
+      autenticación una vez inicializada la conexión e inmediatamente
+      después de un USER.
+
+1.1.6.  Estado de transacción
+
+   Ya habiendo sido autenticado el servidor procede al estado de
+   transacción, en este estado se podra consular el estado del proxy
+   como también alterarlo.  Para esto se usan distintos comandos que
+   procederemos a describir:
+
+   0x02, conexiones concurrentes:
+
+      Argumentos: ninguno
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando obtiene la representación ASCII de la
+      cantidad de conexiones al servidor que se encuentran establecidas
+
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 4]
+
+Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
+
+
+      al momento de procesarse el request.  En el cazo de que el
+      servidor no pueda responder satisfactoriamente al request este
+      responderá con un estado de error apropiado.
+
+   0x03, bytes transferidos:
+
+      Argumentos: ninguno.
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando obtiene como respuesta positiva la
+      representación ASCII de la cantidad de bytes que fueron
+      transferidos desde que el servidor arranco.  En el cazo de que el
+      servidor no pueda responder satisfactoriamente al request este
+      responderá con un estado de error apropiado.
+
+   0x04, Accesos históricos:
+
+      Argumentos: ninguno.
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando obtiene como respuesta positiva el número de
+      accesos que hubieron al servidor desde que se inicializo.  En el
+      cazo de que el servidor no pueda responder satisfactoriamente al
+      request este responderá con un estado de error apropiado.
+
+   0x05, Transformación activa:
+
+      Argumentos: ninguno.
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando obtiene como respuesta la representación
+      ASCII del programa de transformación que esta ejecutando el
+      servidor.  En el caso de no tener ningún programa de
+      transformación se recibe una respuesta positiva sin ningún dato.
+      Si por alguna razón no se pudo devolver la transformación activa
+      entonces se devuelve un código de error apropiado como se
+      especifico anterior mente
+
+   0x06, Modificar el tamaño de los buffers:
+
+      Argumentos: uno, la representación ASCII en decimal del nuevo
+      tamaño para los buffers.
+
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 5]
+
+Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
+
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando cambia el tamaño que se le asignan a los
+      buffers al momento de inciializar una nueva conexion al servidor.
+      Si se pudo realizar el cambio con éxito entonces se obtiene como
+      respuesta 0x00 (OK).  En caso contrario se obtiene una respuesta
+      con el error apropiado como se especifico anteriormente.
+
+   0x07, Cambio de transformación:
+
+      Argumentos: uno, la representación ASCII del nuevo comando de
+      transformación.
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: El comando cambia la transformación a realizar.  En el
+      caso de querer desactivar las transformaciones simplemente se
+      envía el comando de cambio de transformación sin datos.  El
+      servidor responde de manera positiva (0x00) cuando pudo cambiar
+      con éxito las transformaciones, caso contrario responde con un
+      error apropiado.
+
+   0x09, Terminación de la sesión:
+
+      Argumentos: ninguno
+
+      Restricciones: Solo puede ser utilizado en el estado de
+      transacción.
+
+      Discusión: Cuando se envia un request con este comando se le avisa
+      al servidor que el cliente desea finalizar la sesión, el servidor
+      responde de manera exitosa y termina la conexión.
+
+1.1.7.  Limitaciones del protocolo
+
+   El protocolo, dada su simpleza, posee varias limitaciones y las
+   discutimos a continuación
+
+1.1.7.1.  Tamaño de los argumentos
+
+   El protocolo posee un byte para indicar el tamaño del argumento, por
+   lo que permite solamente argumentos de como maximo 255 bytes, esto no
+   limita de manera sustancial el cambio del tamaño de los buffers ya
+   que resultaría excesivo un buffer con un tamaño superior a 10^255
+   bytes.  en cambio limita considerablemente la posibilidad de las
+
+
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 6]
+
+Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
+
+
+   transformaciones a realizar ya que la transformación debe ser un
+   comando con una longitud máxima de 255 caracteres.
+
+2.  Problemas encontrados
+
+2.1.  Piplinging con servidor de origen no pipeliner
+
+2.2.  Detección y transformación de mensajes
+
+3.  Limitaciones
+
+3.1.  modificación del tamaño de los buffers
+
+   se modifican los de las nuevas conexiones a partir del cambio, no
+   dinamicamente las conexiones ya existentes
+
+4.  Posibles extensiones
+
+5.  conclusiones
+
+6.  ejemplos de pruba
+
+7.  Guía de instalación
+
+8.  Instrucciones para la configuración
+
+9.  Ejemplos de configuración y monitoreo
+
+10.  References
 
    [TODO]     Juan F. Codagnone, "Server Socks V5", 3 2018.
 
@@ -148,21 +389,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Delgado, et al.            Expires May 7, 2019                  [Page 3]
+Delgado, et al.            Expires May 7, 2019                  [Page 7]
