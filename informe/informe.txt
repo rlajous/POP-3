@@ -3,8 +3,11 @@
 
 
 Grupo 7                                                       F. Delgado
-Internet-Draft                     Instituto Tecnológico de Buenos Aires
-Expires: May 6, 2019                                    November 2, 2018
+Internet-Draft                                         R. Navarro Lajous
+Expires: May 7, 2019                                          S. Favarón
+                                                            A. Calatayud
+                                   Instituto Tecnológico de Buenos Aires
+                                                        November 3, 2018
 
 
                  Informe TPE Protocolos de comunicación
@@ -28,7 +31,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on May 6, 2019.
+   This Internet-Draft will expire on May 7, 2019.
 
 Copyright Notice
 
@@ -45,30 +48,102 @@ Copyright Notice
    the Trust Legal Provisions and are provided without warranty as
    described in the Simplified BSD License.
 
-1.  Introducción
-
-   1.  The first item.
-
-   2.  The second item, which contains two bulleted sub-items:
 
 
 
-Delgado                    Expires May 6, 2019                  [Page 1]
-
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 1]
+
 Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
 
 
-       *  The first sub-item.
+1.  Introducción
 
-       *  The second sub-item.
+2.  El protocolo SPCP
 
-2.  References
+2.1.  introducción al protocolo
+
+   El Simple Proxy Communication Protocol(SPCP) es un protocolo binario
+   utilizado para poder configurar y obtener métricas de un servidor
+   proxy.  En el diseño del protocolo se priorizo la simpleza asi
+   permitiendo que sea implementado lo mas fácilmente posible siempre y
+   cuando no comprometa el objetivo principal de administrar el proxy
+
+2.2.  Operación Básica
+
+   Inicialmente, el servidor spcp inicializa su servicio escuchando en
+   el puerto 9090 por default para aceptar conexiones sctp entrantes.
+   Cuando el cliente desea utilizar el servicio este debe establecer una
+   conexión sctp con el servidor.
+
+   Una vez establecida la conexión se procede a la etapa de
+   autenticación, el cliente manda su usuario y su contraseña y estos
+   son validados por el servidor.  Una vez autenticado se procede al
+   estado de transacción en donde se mandan requests tanto para
+   modificar el estado del proxy como para obtener métricas del mismo
+   recibiendo para cada uno una respuesta con la informacion en el caso
+   de que se haya podido obtener, o un estado de error apropiado.
+   Finalmente se envía un request de terminación en donde se le indica
+   al servidor que el cliente desea finalizar su sesión y el servidor da
+   por finalizada la sesión.
+
+2.3.  El request
+
+   La estructura de un request
+
+   +-----+-------+----------+----------+...+----------+----------+
+   | CMD | NARGS | ARGLEN 1  |  ARG 1  |   | ARGLEN N |   ARG N  |
+   +-----+-------+----------+----------+...+----------+----------+
+   |  1  |   1   |    1     | Variable |   |    1     | Variable |
+   +-----+-------+----------+----------+...+----------+----------+
+
+   El request se compone por un numero variable de segmentos, estos son:
+
+      CMD: El identificador de comando, tiene un tamaño de un byte
+
+      NARGS: La cantidad de argumentos, tiene tamaño de un byte
+
+
+
+
+
+
+Delgado, et al.            Expires May 7, 2019                  [Page 2]
+
+Internet-Draft   Informe TPE Protocolos de comunicación    November 2018
+
+
+      ARGLEN: Cada argumento se encuentra precedido por el largo del
+      mismo, este tiene un maximo de 255 ya que este campo tiene un byte
+      de longitud
+
+      ARG: El argumento de tamaño anteriormente especificado, los
+      argumentos son representaciones ASCII
+
+2.4.  Estado de autenticación
+
+2.5.  Estado de transacción
+
+3.  References
 
    [TODO]     Juan F. Codagnone, "Server Socks V5", 3 2018.
 
-Author's Address
+Authors' Addresses
 
    Francisco Delgado
+   Instituto Tecnológico de Buenos Aires
+
+
+   Rodrigo Manuel Navarro Lajous
+   Instituto Tecnológico de Buenos Aires
+
+
+   Sebastián Favaron
+   Instituto Tecnológico de Buenos Aires
+
+
+   Agustín Calatayud
    Instituto Tecnológico de Buenos Aires
 
 
@@ -90,23 +165,4 @@ Author's Address
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Delgado                    Expires May 6, 2019                  [Page 2]
+Delgado, et al.            Expires May 7, 2019                  [Page 3]
