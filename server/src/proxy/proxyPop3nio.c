@@ -1107,16 +1107,18 @@ response_write(struct selector_key *key){
             else if(parser->request->cmd == pass && parser->pop3_response_success == true){
                 lock_user(key);
             } else {
-                printf("Received response for %s command",
-                        POP3_CMDS_INFO[parser->request->cmd].string_representation);
+                printf("Received response for %s command for user %s\n",
+                        POP3_CMDS_INFO[parser->request->cmd].string_representation,
+                       (p->username == NULL ? "unknown" : p->username));
             }
             response_close(parser);
             if(!queue_is_empty(queue) &&
                 p->pipeliner &&
                 determine_response_state(queue) != TRANSFORM) {
                     //TODO: no estoy 100% seguro que este printf vaya aca.
-                    printf("sending response for %s command without transformation\n",
-                            POP3_CMDS_INFO[parser->request->cmd].string_representation);
+                    printf("sending response for %s command without transformation for user %s\n",
+                            POP3_CMDS_INFO[parser->request->cmd].string_representation,
+                           (p->username == NULL ? "unknown" : p->username));
                     request = pop_request(queue);
                     response_parser_init(parser, request);
             }
@@ -1145,8 +1147,9 @@ response_write(struct selector_key *key){
             response_parser_init(&other->parser, request);
             selector_set_interest(key->s, *other->fd, OP_READ);
             selector_set_interest(key->s, *d->fd, OP_WRITE);
-            printf("Transforming response for %s request\n",
-                    POP3_CMDS_INFO[request->cmd].string_representation);
+            printf("Transforming response for %s request for user %s\n",
+                    POP3_CMDS_INFO[request->cmd].string_representation,
+                   (p->username == NULL ? "unknown" : p->username));
             return TRANSFORM;
         }
     }

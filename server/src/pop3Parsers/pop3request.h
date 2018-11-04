@@ -145,6 +145,10 @@ static struct pop3_cmd_data POP3_CMDS_INFO[] ={
           .max_args               = 1,
           .min_args               = 1,
           .multi                  = false,
+        },
+        {
+          .request_cmd            = unknown,
+          .string_representation  = "unknown",
         }
 
 };
