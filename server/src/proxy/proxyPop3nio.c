@@ -1010,12 +1010,14 @@ write_user(struct selector_key *key, char *username, size_t length){
     }
     memcpy(pop3->username, username, length);
     pop3->username[length] = '\0';
+    printf("Attempting to validate user %s with origin server\n", pop3->username);
 }
 
 static void
 lock_user(struct selector_key *key){
     struct pop3 *pop3 = ATTACHMENT(key);
     pop3->verified_username = true;
+    printf("Origin server successfully validated user %s\n", pop3->username);
 }
 
 static unsigned
@@ -1102,13 +1104,19 @@ response_write(struct selector_key *key){
             if(parser->request->cmd == user && parser->pop3_response_success == true && !locked_usr) {
                 write_user(key, parser->request->arg[0], parser->request->argsize[0]);
             }
-            if(parser->request->cmd == pass && parser->pop3_response_success == true){
+            else if(parser->request->cmd == pass && parser->pop3_response_success == true){
                 lock_user(key);
+            } else {
+                printf("Received response for %s command",
+                        POP3_CMDS_INFO[parser->request->cmd].string_representation);
             }
             response_close(parser);
             if(!queue_is_empty(queue) &&
                 p->pipeliner &&
                 determine_response_state(queue) != TRANSFORM) {
+                    //TODO: no estoy 100% seguro que este printf vaya aca.
+                    printf("sending response for %s command without transformation\n",
+                            POP3_CMDS_INFO[parser->request->cmd].string_representation);
                     request = pop_request(queue);
                     response_parser_init(parser, request);
             }
@@ -1133,9 +1141,12 @@ response_write(struct selector_key *key){
         } else if(!buffer_can_read_parsed(buffer) &&
                     response_is_done(other->parser.response_state, 0) &&
                     determine_response_state(d->request_queue) == TRANSFORM) {
-            response_parser_init(&other->parser, pop_request(d->request_queue));
+            struct request *request = pop_request(d->request_queue);
+            response_parser_init(&other->parser, request);
             selector_set_interest(key->s, *other->fd, OP_READ);
             selector_set_interest(key->s, *d->fd, OP_WRITE);
+            printf("Transforming response for %s request\n",
+                    POP3_CMDS_INFO[request->cmd].string_representation);
             return TRANSFORM;
         }
     }
@@ -1257,6 +1268,7 @@ transform_write(struct selector_key *key) {
         buffer_read_adv(wb, n);
 
         if(t->transformation_done && !buffer_can_read(wb)) {
+            printf("Finished transformation \n");
           if(queue_is_empty(queue)) {
             selector_set_interest(key->s, pop->client_fd, OP_READ);
             selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
