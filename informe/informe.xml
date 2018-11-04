@@ -87,11 +87,11 @@
           <figure>
             <preamble>La estructura de un response</preamble>
             <artwork>
-              +-------------+---------+----------+
-              | STATUS_CODE | DATALEN |   DATA   |
-              +-------------+---------+----------+
-              |      1      |    1    | Variable |
-              +-------------+---------+----------+
+  +-------------+---------+----------+
+  | STATUS_CODE | DATALEN |   DATA   |
+  +-------------+---------+----------+
+  |      1      |    1    | Variable |
+  +-------------+---------+----------+
             </artwork>
           </figure>
           <t>El response se compone por un numero variable de segmentos, estos son:
@@ -274,9 +274,20 @@
         <t>se modifican los de las nuevas conexiones a partir del cambio, no dinamicamente las conexiones
            ya existentes</t>
       </section>
+      <section title="modificación de content-transfer-encoding">
+        <t>Si se debe reemplazar el content type y el header content-transfer-encoding se encuentra antes
+          del header content-type entonces no se reemplaza por text/plain y el mensaje de reemplazo queda
+          ilegible.
+        </t>
+      </section>
     </section>
     <section title="Posibles extensiones">
-      
+      <section title="Agregado de timeouts">
+        <t>Resultaría útil terminar una conexión que permaneció inactiva por mas de una determinada cantidad
+           de tiempo, así se podría mejorar la performance del proxy ya que se irian purgando las conexiones
+           inactivas
+        </t>
+      </section>
     </section>
     <section title="conclusiones">
       
