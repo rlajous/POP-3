@@ -565,8 +565,13 @@ set_transformation(struct buffer *b, struct spcp_request *request, enum spcp_res
 }
 
 static unsigned
-do_quit(struct buffer *b) {
-    return REQUEST_WRITE;
+do_quit(struct buffer *b, enum spcp_response_status *status) {
+
+    *status = spcp_success;
+    if(-1 == spcp_no_data_request_marshall(b, spcp_success)) {
+        return ERROR;
+    }
+    return DONE;
 }
 
 static unsigned
@@ -640,7 +645,6 @@ spcp_request_read(struct selector_key *key) {
     } else {
         ret = ERROR;
     }
-
     return error ? ERROR : ret;
 }
 
@@ -673,6 +677,34 @@ spcp_request_write(struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+static unsigned
+done_write(struct selector_key *key) {
+    struct spcp *spcp = ATTACHMENT(key);
+    unsigned  ret     = DONE;
+    struct buffer *wb = &spcp->write_buffer;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_read_ptr(wb, &count);
+    n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0);
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(wb, n);
+        if(!buffer_can_read(wb)) {
+            if(SELECTOR_SUCCESS == selector_set_interest_key(key, OP_READ)) {
+                ret = DONE;
+            } else {
+                ret = ERROR;
+            }
+        }
+    }
+    return ret;
+
+}
 
 static void
 parser_close(const unsigned state, struct selector_key *key) {
@@ -712,6 +744,7 @@ static const struct state_definition client_statbl[] = {
                 .on_write_ready   = spcp_request_write,
         },{
                 .state            = DONE,
+                .on_read_ready    = done_write,
         },{
                 .state            = ERROR,
         }
