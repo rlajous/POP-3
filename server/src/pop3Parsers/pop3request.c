@@ -181,12 +181,8 @@ request_consume(buffer *rb, struct request_parser *p, bool *errored, struct requ
     enum request_state st = request_parser_feed(p, c);
     p->request.length++;
     if(request_is_done(st, errored)) {
-        if(p->request.cmd == unknown) {
-            printf("Recieved invalid request \n");
-        } else {
-            printf("Recieved %s request\n", POP3_CMDS_INFO[p->request.cmd].string_representation);
-        }
-        *errored &= request_marshall(p, q);
+       printf("Recieved %s request \n", POP3_CMDS_INFO[p->request.cmd].string_representation);
+       *errored &= request_marshall(p, q);
     }
     return st;
 }

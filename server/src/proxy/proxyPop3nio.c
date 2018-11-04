@@ -113,7 +113,13 @@ struct transform_st {
     bool                    transform_needed;
 };
 
-
+struct append_capa_st {
+    buffer                  *wb, *rb, *t_rb, *t_wb;
+    struct response_parser  parser;
+    bool                    capa_done;
+    struct request_queue    *request_queue;
+    bool                    append_needed;
+};
 
 struct pop3 {
     /** información del cliente */
@@ -136,6 +142,8 @@ struct pop3 {
     int                           transformation_read;
     int                           transformation_write;
     struct transform_st           transform;
+
+    struct append_capa_st         append_capa;
 
     /** maquinas de estados */
     struct state_machine          stm;
@@ -816,7 +824,7 @@ should_transform(struct request *request) {
 
 static bool
 should_append_capa(struct request *request) {
-    return false;
+    return request->cmd == capa;
 }
 
 static enum pop3_state
@@ -1290,6 +1298,7 @@ transform_write(struct selector_key *key) {
 
     while(buffer_can_parse(rb)) {
         st = response_consume(rb, parser);
+        //TODO: transform needed is never initialized so it is NULL here.
         if(t->transform_needed == false && st == response_new_line) {
             t->transform_needed = parser->pop3_response_success ? true : false;
             open_transformation(key);
@@ -1579,6 +1588,139 @@ error_write(struct selector_key *key) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// APPEND_CAPA
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+append_capa_init(const unsigned state, struct selector_key *key) {
+    struct pop3         *p =  ATTACHMENT(key);
+    struct append_capa_st *a = &p->append_capa;
+
+    a->rb                  = &p->response_r_buffer;
+    a->wb                  = &p->response_w_buffer;
+//    t->t_rb                = &p->transform_r_buffer;
+//    t->t_wb                = &p->transform_w_buffer;
+    a->request_queue       = p->request_queue;
+    a->capa_done           = false;
+    a->append_needed       = NULL;
+    a->parser              = p->origin.response.parser;
+}
+
+
+static unsigned
+append_capa_read(struct selector_key *key) {
+    struct pop3         *pop = ATTACHMENT(key);
+    struct append_capa_st *a   = &pop->append_capa;
+
+    buffer  *rb  = a->rb;
+    buffer  *wb  = a->wb;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+
+    ptr = buffer_write_ptr(rb, &count);
+    n = recv(key->fd, ptr, count, 0);
+    if(n > 0) {
+        buffer_write_adv(rb, n);
+        compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
+        compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+        compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+    } else {
+        return ERROR;
+    }
+    return APPEND_CAPA;
+}
+
+static unsigned
+append_capa_write(struct selector_key *key) {
+    struct pop3         *pop = ATTACHMENT(key);
+    struct append_capa_st *a   = &pop->append_capa;
+
+    buffer  *rb  = a->rb;
+    buffer  *wb  = a->wb;
+    uint8_t *ptr;
+    size_t  count;
+    ssize_t  n;
+    struct response_parser *parser = &a->parser;
+    struct request_queue   *queue  = a->request_queue;
+    struct request         *request;
+
+    unsigned ret = APPEND_CAPA;
+    enum response_state st;
+
+    if(a->append_needed) {
+        ptr = buffer_read_ptr(wb, &count);
+        n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+
+        if(n == -1) {
+            ret = ERROR;
+        } else {
+            buffer_read_adv(wb, n);
+
+            if(a->capa_done && !buffer_can_read(wb)) {
+                printf("Finished appending capa \n");
+                if(queue_is_empty(queue)) {
+                    selector_set_interest(key->s, pop->client_fd, OP_READ);
+                    selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
+                    ret = REQUEST;
+                } else {
+                    selector_set_interest(key->s, pop->origin_fd, OP_READ);
+                    selector_set_interest(key->s, pop->client_fd, OP_WRITE);
+                    ret = RESPONSE;
+                }
+            } else {
+                compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
+                compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+                compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+                ret = APPEND_CAPA;
+            }
+        }
+        return ret;
+    }
+
+    while(buffer_can_parse(rb)) {
+        st = response_consume(rb, parser);
+        if(a->append_needed == false && st == response_new_line) {
+            a->append_needed = parser->pop3_response_success ? true : false;
+            open_transformation(key);
+            break;
+        }
+        if(response_is_done(st, 0)) {
+            response_close(parser);
+            break;
+        }
+    }
+
+    ptr = buffer_parse_ptr(rb, &count);
+    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+
+    if(n == -1) {
+        ret = ERROR;
+    } else {
+        buffer_read_adv(rb, n);
+
+        if(response_is_done(a->parser.response_state, 0) && !buffer_can_read_parsed(rb)) {
+            if(queue_is_empty(queue)) {
+                selector_set_interest(key->s, pop->client_fd, OP_READ);
+                selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
+                ret = REQUEST;
+            } else {
+                selector_set_interest(key->s, pop->origin_fd, OP_READ);
+                selector_set_interest(key->s, pop->client_fd, OP_WRITE);
+                ret = RESPONSE;
+            }
+        } else {
+            compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
+            compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+            compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+            ret = APPEND_CAPA;
+        }
+    }
+
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 /** definición de handlers para cada estado */
 static const struct state_definition proxy_states[] = {
@@ -1617,6 +1759,9 @@ static const struct state_definition proxy_states[] = {
                 .on_write_ready   = transform_write,
         },{
                 .state            = APPEND_CAPA,
+                .on_arrival       = append_capa_init,
+                .on_read_ready    = append_capa_read,
+                .on_write_ready   = append_capa_write,
         },{
                 .state            = DONE,
         },{
