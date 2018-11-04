@@ -119,6 +119,7 @@ struct append_capa_st {
     bool                    capa_done;
     struct request_queue    *request_queue;
     bool                    append_needed;
+    size_t                  sent_bytes;
 };
 
 struct pop3 {
@@ -1639,6 +1640,7 @@ append_capa_write(struct selector_key *key) {
     buffer  *rb  = a->rb;
     buffer  *wb  = a->wb;
     uint8_t *ptr;
+    char *append = "pipelining\r\n";
     size_t  count;
     ssize_t  n;
     struct response_parser *parser = &a->parser;
@@ -1649,15 +1651,16 @@ append_capa_write(struct selector_key *key) {
     enum response_state st;
 
     if(a->append_needed) {
-        ptr = buffer_read_ptr(wb, &count);
-        n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+        count = strlen(append) - a->sent_bytes;
+        n = send(key->fd, append + a->sent_bytes, count, MSG_NOSIGNAL);
 
         if(n == -1) {
             ret = ERROR;
         } else {
             buffer_read_adv(wb, n);
+            a->sent_bytes += n;
 
-            if(a->capa_done && !buffer_can_read(wb)) {
+            if(a->sent_bytes >= strlen(append)) {
                 printf("Finished appending capa \n");
                 if(queue_is_empty(queue)) {
                     selector_set_interest(key->s, pop->client_fd, OP_READ);
@@ -1682,7 +1685,6 @@ append_capa_write(struct selector_key *key) {
         st = response_consume(rb, parser);
         if(a->append_needed == false && st == response_new_line) {
             a->append_needed = parser->pop3_response_success ? true : false;
-            open_transformation(key);
             break;
         }
         if(response_is_done(st, 0)) {
