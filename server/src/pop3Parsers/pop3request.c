@@ -61,7 +61,6 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
     if(c == ' '){
         if(request_identify_cmd(p)){
             remaining_set(p, MAX_ARG_LENGTH);
-            p->new_arg = true;
             return request_arg;
         }
     }
@@ -83,9 +82,10 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
 }
  
 enum request_state
-request_parse_arg(struct request_parser *p, const uint8_t c){
+request_parse_arg(struct request_parser *p, const uint8_t c) {
     /** recieve a CF */
     if(c == '\r'){
+        p->request.nargs++;
         p->request.arg[p->request.nargs-1][p->i] = '\0';
         return request_CR;
 
@@ -97,14 +97,10 @@ request_parse_arg(struct request_parser *p, const uint8_t c){
     if(c == ' '){
         p->request.arg[p->request.nargs-1][p->i] = '\0';
         remaining_set(p, MAX_ARG_LENGTH);
-        p->new_arg = true;
+        p->request.nargs++;
         return request_arg;
     }
     if(!remaining_is_done(p)){
-        if(p->new_arg) {
-            p->request.nargs++;
-            p->new_arg = false;
-        }
         arg_dependant_multi(p);
         char current_char = (char)c;
         p->request.arg[p->request.nargs][p->i++] = current_char;
