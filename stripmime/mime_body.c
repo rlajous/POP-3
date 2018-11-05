@@ -22,6 +22,7 @@
  *                                             ; CRLF => folding
  */
 enum state {
+    BODY0,
     BODY,
     BODY_CR,
     ERROR,
@@ -29,6 +30,13 @@ enum state {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Acciones
+
+static void
+value0(struct parser_event *ret, const uint8_t c) {
+    ret->type    = BODY_VALUE0;
+    ret->n       = 1;
+    ret->data[0] = c;
+}
 
 static void
 value(struct parser_event *ret, const uint8_t c) {
@@ -58,6 +66,15 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
+static const struct parser_state_transition ST_BODY0[] =  {
+    {.when = '\r',                 .dest = BODY_CR,       .act1 = wait,      },
+    {.when = TOKEN_CHAR,           .dest = BODY,          .act1 = value0,
+                                                          .act2 = value,     },
+    {.when = TOKEN_EXTENDED_CHAR,  .dest = BODY,          .act1 = value0,
+                                                          .act2 = value,     },
+    {.when = ANY,                  .dest = ERROR,         .act1 = unexpected,},
+};
+
 static const struct parser_state_transition ST_BODY[] =  {
     {.when = '\r',                 .dest = BODY_CR,       .act1 = wait,      },
     {.when = TOKEN_CHAR,           .dest = BODY,          .act1 = value,     },
@@ -66,7 +83,7 @@ static const struct parser_state_transition ST_BODY[] =  {
 };
 
 static const struct parser_state_transition ST_BODY_CR[] =  {
-    {.when = '\n',       .dest = BODY,         .act1 = value_cr,
+    {.when = '\n',       .dest = BODY0,        .act1 = value_cr,
                                                .act2 = value,     },
     {.when = ANY,        .dest = ERROR,        .act1 = unexpected,},
 };
@@ -79,6 +96,7 @@ static const struct parser_state_transition ST_ERROR[] =  {
 // Declaración formal
 
 static const struct parser_state_transition *states [] = {
+        ST_BODY0,
         ST_BODY,
         ST_BODY_CR,
         ST_ERROR,
@@ -87,6 +105,7 @@ static const struct parser_state_transition *states [] = {
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
 static const size_t states_n [] = {        
+        N(ST_BODY0),
         N(ST_BODY),
         N(ST_BODY_CR),
         N(ST_ERROR),
@@ -96,7 +115,7 @@ static struct parser_definition definition = {
         .states_count = N(states),
         .states       = states,
         .states_n     = states_n,
-        .start_state  = BODY,
+        .start_state  = BODY0,
 };
 
 const struct parser_definition *
@@ -109,6 +128,9 @@ mime_body_event(enum mime_body_event_type type) {
     const char *ret;
 
     switch(type) {
+        case BODY_VALUE0:
+            ret = "body0(c)";
+            break;
         case BODY_VALUE:
             ret = "body(c)";
             break;

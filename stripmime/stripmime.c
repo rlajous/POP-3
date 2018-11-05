@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "parser.h"
 #include "parser_utils.h"
 #include "pop3_multi.h"
 #include "mime_chars.h"
@@ -99,6 +100,8 @@ struct ctx {
     /* ¿hay que imprimir el caracter actual?
      */
     bool *print_curr_char;
+    /* ¿se modifico dinamicamente la definicion de boudary_border ya? */
+    bool *boundary_border_modified;
     /* stack de content-types */
     char **content_types;
     /* cantidad de content_types */
@@ -293,6 +296,10 @@ boundary_key(struct ctx *ctx, const uint8_t c) {
  */
 static void
 boundary_border(struct ctx *ctx, const uint8_t c) {
+    if(ctx->boundaries_n > 0 && !*ctx->boundary_border_modified) {
+        //ctx->boundary_border = parser_boundary_border_redefine(ctx->boundary_border, ctx->boundaries[ctx->boundaries_n-1]);
+        //ctx->boundary_border_modified = &T;
+    }
     const struct parser_event* e = parser_feed(ctx->boundary_border, c);
     do {
         debug("3. boun_border", parser_utils_strcmpi_event, e);
@@ -300,10 +307,12 @@ boundary_border(struct ctx *ctx, const uint8_t c) {
             case STRING_CMP_EQ:
                 ctx->msg_boundary_border_detected = &T;
                 parser_reset(ctx->boundary_border);
+                ctx->boundary_border_modified = &F;
                 break;
             case STRING_CMP_NEQ:    
                 ctx->msg_boundary_border_detected = &F;
                 parser_reset(ctx->boundary_border);
+                ctx->boundary_border_modified = &F;
                 break;
         }
         e = e->next;
@@ -360,6 +369,7 @@ body(struct ctx *ctx, const uint8_t c) {
     do {
         debug("2.        body", mime_body_event, e);
         switch(e->type) {
+            case BODY_VALUE0:
             case BODY_VALUE:
                 if(ctx->boundaries_n > 0) {
                     if(ctx->msg_boundary_border_detected == NULL) {
@@ -373,6 +383,8 @@ body(struct ctx *ctx, const uint8_t c) {
                     }
                     if(e->data[0] == '\n') {
                         ctx->msg_boundary_border_detected = NULL;
+                        parser_reset(ctx->boundary_border);
+                        parser_reset(ctx->boundary_border_end);
                     }
                 }
                 break;            
@@ -485,7 +497,11 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
                     strcat(border, ctx->boundaries[ctx->boundaries_n-1]);
                     printf("\nB- %s -B\n", border);
                     struct parser_definition border_def = parser_utils_strcmpi(border);
-                    ctx->boundary_border = parser_init(init_char_class(), &border_def);
+                    if(ctx->boundaries_n > 0) {
+                        //ctx->boundary_border = parser_boundary_border_redefine(ctx->boundary_border, ctx->boundaries[ctx->boundaries_n-1]);
+                        boundary_parser_init(ctx->boundary_border, &border_def);
+                    }
+                    //ctx->boundary_border = parser_init(init_char_class(), &border_def);
                     //ctx->boundary_border = parser_boundary_border_redefine(ctx->boundaries[ctx->boundaries_n-1]);
                 } else {
                     ctx->print_curr_char = &T;
@@ -554,7 +570,7 @@ main(const int argc, const char **argv) {
     struct parser_definition boundary_name_def =
             parser_utils_strcmpi_ignore_lwsp("boundary=\"");
     struct parser_definition boundary_border_def =
-            parser_utils_strcmpi_ignore_lwsp("--tempboundary");
+            parser_utils_strcmpi("--tempboundary");
     
     struct ctx ctx = {
         // Parsers
@@ -578,6 +594,7 @@ main(const int argc, const char **argv) {
         .blacklist                     = calloc(1024, sizeof(char *)),
         .blacklist_n                   = 0,
         .print_curr_char               = &T,
+        .boundary_border_modified      = &F,
     };
 
     for(int i=0; i<MAX_CONTENT_TYPES; i++) {

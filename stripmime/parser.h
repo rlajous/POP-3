@@ -1,5 +1,5 @@
-#ifndef PARSER_H_00180a6350a1fbe79f133adf0a96eb6685c242b6
-#define PARSER_H_00180a6350a1fbe79f133adf0a96eb6685c242b6
+#ifndef PARSER_H_01180a6350a1fbe79f133adf0a96eb6685c242b6
+#define PARSER_H_01180a6350a1fbe79f133adf0a96eb6685c242b6
 
 /**
  * parser.c -- pequeño motor para parsers/lexers.
@@ -57,6 +57,9 @@ struct parser_definition {
     /** estado inicial */
     const unsigned                         start_state;
 };
+
+struct parser *
+parser_boundary_border_redefine(struct parser *par, char *boundary);
 
 /**
  * inicializa el parser.

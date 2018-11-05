@@ -11,6 +11,9 @@
 struct parser;
 enum mime_body_event_type {
     
+    /* primera lectura del valor */
+    BODY_VALUE0,
+    
     /* leyendo el valor */
     BODY_VALUE,
     

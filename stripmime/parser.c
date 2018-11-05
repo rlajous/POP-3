@@ -32,12 +32,13 @@ parser_destroy(struct parser *p) {
 }
 
 struct parser *
-parser_boundary_border_redefine(char *boundary) {
+parser_boundary_border_redefine(struct parser *par, char *boundary) {
     char *border = calloc(2 + 1024, sizeof(char));
     strcat(border, "--");
     strcat(border, boundary);
     struct parser_definition border_def = parser_utils_strcmpi(border);
-    return parser_init(init_char_class(), &border_def);
+    par->def = &border_def;
+    return par;
 }
 
 struct parser *
