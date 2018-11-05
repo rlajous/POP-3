@@ -59,7 +59,8 @@ struct parser_definition {
 };
 
 struct parser *
-parser_boundary_border_redefine(struct parser *par, char *boundary);
+boundary_parser_init(struct parser *p,
+            const struct parser_definition *def);
 
 /**
  * inicializa el parser.
