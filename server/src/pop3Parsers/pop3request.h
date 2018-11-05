@@ -162,6 +162,9 @@ struct request_parser {
     uint8_t n;
     /** cuantos bytes ya leimos */
     uint8_t i;
+    /**  cuando trancicionamos al estado de parseo
+     *   de argumentos indicamos que acabamos de transicionar */
+    bool new_arg;
 };
 
 /** inicializa el parser */
