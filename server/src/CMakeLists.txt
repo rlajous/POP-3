@@ -17,7 +17,8 @@ add_executable(proxyPop main.c
         spcpParsers/spcpRequest.h
         proxy/spcpServerCredentials.c
         proxy/spcpServerCredentials.h
-        )
+        pop3Parsers/pop3responseDescaping.c pop3Parsers/pop3responseDescaping.h
+        pop3Parsers/pop3responseEscaping.c pop3Parsers/pop3responseEscaping.h)
 find_package(Threads)
 target_link_libraries(proxyPop ${CMAKE_THREAD_LIBS_INIT} sctp)
 

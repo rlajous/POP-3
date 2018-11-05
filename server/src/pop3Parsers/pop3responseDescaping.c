@@ -1,15 +1,15 @@
 //
-// Created by francisco on 03/11/18.
+// Created by francisco on 04/11/18.
 //
 
-#include <string.h>
-#include <stdlib.h>
-#include "pop3responseEscaping.h"
+#include <stddef.h>
+#include <stdint.h>
+#include "pop3responseDescaping.h"
+#include "../utils/buffer.h"
 #include "pop3response.h"
 
-
 enum response_state
-e_new_line(struct escape_response_parser *p, const uint8_t c) {
+d_new_line(struct escape_response_parser *p, const uint8_t c) {
     if(c == '.'){
         return response_dot;
     }
@@ -19,10 +19,9 @@ e_new_line(struct escape_response_parser *p, const uint8_t c) {
 }
 
 enum response_state
-e_dot(struct escape_response_parser *p, const uint8_t c, buffer *b) {
-    p->response_size_i++;
-    buffer_write(b, c);
+d_dot(struct descape_response_parser *p, const uint8_t c) {
     if(c == '\r') {
+        //add cr to buffer
         return response_dot_cr;
     } else {
         return response_byte;
@@ -30,16 +29,17 @@ e_dot(struct escape_response_parser *p, const uint8_t c, buffer *b) {
 }
 
 enum response_state
-e_dot_cr(struct escape_response_parser *p, const uint8_t c) {
+d_dot_cr(struct descape_response_parser *p, const uint8_t c, buffer *b) {
     if(c == '\n') {
         return response_done;
     } else {
+        buffer_write(b, '\r');
         return response_byte;
     }
 }
 
 enum response_state
-e_byte(struct escape_response_parser *p, const uint8_t c) {
+d_byte(struct descape_response_parser *p, const uint8_t c) {
     if(c == '\r') {
         return response_cr;
     } else {
@@ -48,7 +48,7 @@ e_byte(struct escape_response_parser *p, const uint8_t c) {
 }
 
 enum response_state
-e_cr(struct escape_response_parser *p, const uint8_t c) {
+d_cr(struct descape_response_parser *p, const uint8_t c) {
     if(c == '\n'){
         return response_new_line;
     } else {
@@ -56,25 +56,26 @@ e_cr(struct escape_response_parser *p, const uint8_t c) {
     }
 }
 
+
 extern enum response_state
-escape_response_parser_feed(struct escape_response_parser *p, const uint8_t c, buffer *b) {
+descape_response_parser_feed(struct descape_response_parser *p, const uint8_t c, buffer *b) {
     enum response_state next;
 
     switch (p->response_state) {
         case response_new_line:
-            next = e_new_line(p, c);
+            next = d_new_line(p, c);
             break;
         case response_dot:
-            next = e_dot(p, c, b);
+            next = d_dot(p, c);
             break;
         case response_dot_cr:
-            next = e_dot_cr(p, c);
+            next = d_dot_cr(p, c, b);
             break;
         case response_byte:
-            next = e_byte(p, c);
+            next = d_byte(p, c);
             break;
         case response_cr:
-            next = e_cr(p, c);
+            next = d_cr(p, c);
             break;
         case response_done:
             next = response_done;
@@ -87,48 +88,32 @@ escape_response_parser_feed(struct escape_response_parser *p, const uint8_t c, b
 }
 
 extern void
-escape_response_parser_init(struct escape_response_parser *p, size_t response_size) {
+descape_response_parser_init(struct descape_response_parser *p, size_t response_size) {
     p->response_state = response_new_line;
     p->response_size_i = 0;
     p->response_size_n = response_size;
 }
 
 extern bool
-escape_response_is_done(struct escape_response_parser *p) {
+descape_response_is_done(struct descape_response_parser *p) {
     return p->response_size_n <= p->response_size_i;
 }
 
 
 enum response_state
-escape_response_consume(buffer *rb, buffer *wb, struct escape_response_parser *p, bool *errored) {
+descape_response_consume(buffer *rb, buffer *wb, struct descape_response_parser *p, bool *errored) {
     enum response_state st = p->response_state;
-    size_t n;
-    buffer_write_ptr(wb, &n);
-    //TODO: Cuidado que pueden quedar cosas colgadas en el readbuffer. Probablemente debemos loopear exteriormente.
-    while(buffer_can_read(rb) && n > 2){
+
+    while(buffer_can_read(rb)){
         const  uint8_t c = buffer_read(rb);
-        st = escape_response_parser_feed(p, c, wb);
+        st = descape_response_parser_feed(p, c, wb);
         buffer_write(wb, c);
         p->response_size_i++;
-        buffer_write_ptr(wb, &n);
     }
     return st;
 }
 
 void
-escape_response_close(struct escape_response_parser *p) {
+descape_response_close(struct descape_response_parser *p) {
     //nada que hacer
 }
-
-int
-response_add_termination(buffer *wb) {
-    size_t n;
-    uint8_t *ptr = buffer_write_ptr(wb, &n);
-    if(n < 5){
-        return -1;
-    } else {
-        memcpy(ptr, "\r\n.\r\n", 5);
-    }
-    return 5;
-}
-
