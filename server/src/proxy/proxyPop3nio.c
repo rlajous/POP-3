@@ -25,7 +25,7 @@
 extern arguments proxyArguments;
 extern metrics  *proxy_metrics;
 
-size_t BUFFER_SIZE = 512;
+size_t BUFFER_SIZE = 2048;
 
 
 enum pop3_state {
@@ -159,7 +159,6 @@ struct pop3 {
     struct state_machine          stm;
 
     /** estados para el client_fd */
-    //TODO: Revisar request response union
     union {
         struct hello_st     hello;
         struct request_st   request;
@@ -1150,16 +1149,15 @@ response_write(struct selector_key *key){
                POP3_CMDS_INFO[parser->request->cmd].string_representation,
                (p->username == NULL ? "unknown" : p->username));
       }
+        printf("sending response for %s command without transformation for user %s\n",
+               POP3_CMDS_INFO[parser->request->cmd].string_representation,
+                       (p->username == NULL ? "unknown" : p->username));
       response_close(parser);
       if(!queue_is_empty(queue) &&
          p->pipeliner &&
          determine_response_state(queue, key) == RESPONSE) {
-        //TODO: no estoy 100% seguro que este printf vaya aca.
-        printf("sending response for %s command without transformation for user %s\n",
-               POP3_CMDS_INFO[parser->request->cmd].string_representation,
-               (p->username == NULL ? "unknown" : p->username));
-        request = pop_request(queue);
-        response_parser_init(parser, request);
+         request = pop_request(queue);
+         response_parser_init(parser, request);
       } else {
           d->should_parse = false;
           break;
