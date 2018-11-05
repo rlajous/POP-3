@@ -829,12 +829,13 @@ should_append_capa(struct request *request) {
 }
 
 static enum pop3_state
-determine_response_state(struct request_queue *q){
+determine_response_state(struct request_queue *q, struct selector_key *key){
     struct request *r = peek_request(q);
+    struct pop3    *p = ATTACHMENT(key);
 
     if(should_transform(r))
         return TRANSFORM;
-    if(should_append_capa(r))
+    if(should_append_capa(r) && !p->pipeliner)
         return APPEND_CAPA;
 
     return RESPONSE;
@@ -1106,66 +1107,69 @@ response_write(struct selector_key *key){
         return TRANSFORM;
     }
 
-    enum response_state st;
-    while(buffer_can_parse(buffer)) {
-        st = response_consume(buffer, parser);
-        if(response_is_done(st, 0)) {
-            if(parser->request->cmd == user && parser->pop3_response_success == true && !locked_usr) {
-                write_user(key, parser->request->arg[0], parser->request->argsize[0]);
-            }
-            else if(parser->request->cmd == pass && parser->pop3_response_success == true){
-                lock_user(key);
-            } else {
-                printf("Received response for %s command for user %s\n",
-                        POP3_CMDS_INFO[parser->request->cmd].string_representation,
-                       (p->username == NULL ? "unknown" : p->username));
-            }
-            response_close(parser);
-            if(!queue_is_empty(queue) &&
-                p->pipeliner &&
-                determine_response_state(queue) != TRANSFORM) {
-                    //TODO: no estoy 100% seguro que este printf vaya aca.
-                    printf("sending response for %s command without transformation for user %s\n",
-                            POP3_CMDS_INFO[parser->request->cmd].string_representation,
-                           (p->username == NULL ? "unknown" : p->username));
-                    request = pop_request(queue);
-                    response_parser_init(parser, request);
-            }
-        }
-        break;
-    }
+  if(should_append_capa(parser->request) && !p->pipeliner) {
+    selector_set_interest(key->s, *other->fd, OP_READ);
+    selector_set_interest(key->s, *d->fd, OP_WRITE);
+    return APPEND_CAPA;
+  }
 
-    ptr = buffer_parse_ptr(buffer, &count);
-    n = send(key->fd, ptr, count, MSG_NOSIGNAL);
-
-    if(n == -1) {
-        ret = ERROR;
-    } else {
-        buffer_read_adv(buffer, n);
-
-        if(!buffer_can_read_parsed(buffer) &&
-            ((queue_is_empty(d->request_queue) && p->pipeliner) || (!p->pipeliner))
-            && response_is_done(other->parser.response_state, 0)) {
-            compute_read_interests(key->s, &p->request_buffer, OP_READ, *d->fd);
-            compute_write_interests(key->s, &p->request_buffer, OP_WRITE, *other->fd);
-            ret = REQUEST;
-        } else if(!buffer_can_read_parsed(buffer) &&
-                    response_is_done(other->parser.response_state, 0) &&
-                    determine_response_state(d->request_queue) == TRANSFORM) {
-            struct request *request = pop_request(d->request_queue);
-            response_parser_init(&other->parser, request);
-            selector_set_interest(key->s, *other->fd, OP_READ);
-            selector_set_interest(key->s, *d->fd, OP_WRITE);
-            printf("Transforming response for %s request for user %s\n",
-                    POP3_CMDS_INFO[request->cmd].string_representation,
-                   (p->username == NULL ? "unknown" : p->username));
-            return TRANSFORM;
-        }
+  enum response_state st;
+  while(buffer_can_parse(buffer)) {
+    st = response_consume(buffer, parser);
+    if(response_is_done(st, 0)) {
+      if(parser->request->cmd == user && parser->pop3_response_success == true && !locked_usr) {
+        write_user(key, parser->request->arg[0], parser->request->argsize[0]);
+      }
+      else if(parser->request->cmd == pass && parser->pop3_response_success == true){
+        lock_user(key);
+      } else {
+        printf("Received response for %s command for user %s\n",
+               POP3_CMDS_INFO[parser->request->cmd].string_representation,
+               (p->username == NULL ? "unknown" : p->username));
+      }
+      response_close(parser);
+      if(!queue_is_empty(queue) &&
+         p->pipeliner &&
+         determine_response_state(queue, key) == RESPONSE) {
+        //TODO: no estoy 100% seguro que este printf vaya aca.
+        printf("sending response for %s command without transformation for user %s\n",
+               POP3_CMDS_INFO[parser->request->cmd].string_representation,
+               (p->username == NULL ? "unknown" : p->username));
+        request = pop_request(queue);
+        response_parser_init(parser, request);
+      }
     }
-    if(ret == RESPONSE){
-        ret = response_interests(key);
+    break;
+  }
+
+  ptr = buffer_parse_ptr(buffer, &count);
+  n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+
+  if(n == -1) {
+    ret = ERROR;
+  } else {
+    buffer_read_adv(buffer, n);
+
+    if(!buffer_can_read_parsed(buffer) &&
+       ((queue_is_empty(d->request_queue) && p->pipeliner) || (!p->pipeliner))
+       && response_is_done(other->parser.response_state, 0)) {
+      compute_read_interests(key->s, &p->request_buffer, OP_READ, *d->fd);
+      compute_write_interests(key->s, &p->request_buffer, OP_WRITE, *other->fd);
+      ret = REQUEST;
+    } else if(!buffer_can_read_parsed(buffer) &&
+              response_is_done(other->parser.response_state, 0) &&
+              (ret = determine_response_state(d->request_queue, key)) != RESPONSE) {
+      request = pop_request(d->request_queue);
+      response_parser_init(&other->parser, request);
+      selector_set_interest(key->s, *other->fd, OP_READ);
+      selector_set_interest(key->s, *d->fd, OP_WRITE);
+      return ret;
     }
-    return ret;
+  }
+  if(ret == RESPONSE){
+    ret = response_interests(key);
+  }
+  return ret;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1186,8 +1190,12 @@ transform_init(const unsigned state, struct selector_key *key) {
 //    t->t_wb                = &p->transform_w_buffer;
     t->request_queue       = p->request_queue;
     t->transformation_done = false;
-    t->transform_needed    = NULL;
+    t->transform_needed    = false;
     t->parser              = p->origin.response.parser;
+
+    printf("Transforming response for %s request for user %s\n",
+           POP3_CMDS_INFO[t->parser.request->cmd].string_representation,
+           (p->username == NULL ? "unknown" : p->username));
 }
 
 static unsigned
@@ -1299,7 +1307,6 @@ transform_write(struct selector_key *key) {
 
     while(buffer_can_parse(rb)) {
         st = response_consume(rb, parser);
-        //TODO: transform needed is never initialized so it is NULL here.
         if(t->transform_needed == false && st == response_new_line) {
             t->transform_needed = parser->pop3_response_success ? true : false;
             open_transformation(key);
@@ -1517,11 +1524,9 @@ transf_write(struct selector_key *key) {
         buffer_read_adv(b, n);
         transform_interests(t, key);
     } else if (n == -1 || n == 0) {
-//        t->status = transf_status_err;
         selector_set_interest_key(key, OP_NOOP);
         selector_set_interest(key->s, p->origin_fd, OP_READ);
         selector_set_interest(key->s, p->client_fd, OP_WRITE);
-//        t->error_rd = true;
     }
 
     if(response_is_done(st, 0) && !buffer_can_read_parsed(b)) {
@@ -1599,12 +1604,11 @@ append_capa_init(const unsigned state, struct selector_key *key) {
 
     a->rb                  = &p->response_r_buffer;
     a->wb                  = &p->response_w_buffer;
-//    t->t_rb                = &p->transform_r_buffer;
-//    t->t_wb                = &p->transform_w_buffer;
     a->request_queue       = p->request_queue;
     a->capa_done           = false;
-    a->append_needed       = NULL;
+    a->append_needed       = false;
     a->parser              = p->origin.response.parser;
+    a->sent_bytes          = 0;
 }
 
 
@@ -1625,7 +1629,7 @@ append_capa_read(struct selector_key *key) {
         buffer_write_adv(rb, n);
         compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
         compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
-        compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+//        compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
     } else {
         return ERROR;
     }
@@ -1640,7 +1644,7 @@ append_capa_write(struct selector_key *key) {
     buffer  *rb  = a->rb;
     buffer  *wb  = a->wb;
     uint8_t *ptr;
-    char *append = "pipelining\r\n";
+    char *append = "PIPELINING\r\n";
     size_t  count;
     ssize_t  n;
     struct response_parser *parser = &a->parser;
@@ -1650,32 +1654,20 @@ append_capa_write(struct selector_key *key) {
     unsigned ret = APPEND_CAPA;
     enum response_state st;
 
-    if(a->append_needed) {
+    if(a->append_needed && !a->capa_done) {
         count = strlen(append) - a->sent_bytes;
         n = send(key->fd, append + a->sent_bytes, count, MSG_NOSIGNAL);
 
         if(n == -1) {
             ret = ERROR;
         } else {
-            buffer_read_adv(wb, n);
             a->sent_bytes += n;
 
             if(a->sent_bytes >= strlen(append)) {
-                printf("Finished appending capa \n");
-                if(queue_is_empty(queue)) {
-                    selector_set_interest(key->s, pop->client_fd, OP_READ);
-                    selector_set_interest(key->s, pop->origin_fd, OP_WRITE);
-                    ret = REQUEST;
-                } else {
-                    selector_set_interest(key->s, pop->origin_fd, OP_READ);
-                    selector_set_interest(key->s, pop->client_fd, OP_WRITE);
-                    ret = RESPONSE;
-                }
-            } else {
-                compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
-                compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
-                compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
-                ret = APPEND_CAPA;
+              a->capa_done = true;
+              compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
+              compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+              ret = APPEND_CAPA;
             }
         }
         return ret;
@@ -1683,7 +1675,7 @@ append_capa_write(struct selector_key *key) {
 
     while(buffer_can_parse(rb)) {
         st = response_consume(rb, parser);
-        if(a->append_needed == false && st == response_new_line) {
+        if(a->append_needed == false && st == response_new_line && !a->capa_done) {
             a->append_needed = parser->pop3_response_success ? true : false;
             break;
         }
@@ -1714,7 +1706,6 @@ append_capa_write(struct selector_key *key) {
         } else {
             compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
             compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
-            compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
             ret = APPEND_CAPA;
         }
     }
