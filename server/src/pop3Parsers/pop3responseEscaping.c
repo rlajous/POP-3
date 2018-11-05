@@ -9,33 +9,15 @@
 
 
 enum response_state
-e_new_line(struct escape_response_parser *p, const uint8_t c) {
+e_new_line(struct escape_response_parser *p, const uint8_t c, buffer *b) {
     if(c == '.'){
-        return response_dot;
+        buffer_write(b, c);
     }
-    else {
-        return response_byte;
+    if(c == '\r'){
+        return response_cr;
     }
-}
+    return response_byte;
 
-enum response_state
-e_dot(struct escape_response_parser *p, const uint8_t c, buffer *b) {
-    p->response_size_i++;
-    buffer_write(b, c);
-    if(c == '\r') {
-        return response_dot_cr;
-    } else {
-        return response_byte;
-    }
-}
-
-enum response_state
-e_dot_cr(struct escape_response_parser *p, const uint8_t c) {
-    if(c == '\n') {
-        return response_done;
-    } else {
-        return response_byte;
-    }
 }
 
 enum response_state
@@ -62,13 +44,7 @@ escape_response_parser_feed(struct escape_response_parser *p, const uint8_t c, b
 
     switch (p->response_state) {
         case response_new_line:
-            next = e_new_line(p, c);
-            break;
-        case response_dot:
-            next = e_dot(p, c, b);
-            break;
-        case response_dot_cr:
-            next = e_dot_cr(p, c);
+            next = e_new_line(p, c, b);
             break;
         case response_byte:
             next = e_byte(p, c);

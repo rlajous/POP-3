@@ -63,7 +63,7 @@ descape_response_parser_feed(struct descape_response_parser *p, const uint8_t c,
 
     switch (p->response_state) {
         case response_new_line:
-            next = d_new_line(p, c);
+            next = d_new_line(p, c, b);
             break;
         case response_dot:
             next = d_dot(p, c);
@@ -72,10 +72,10 @@ descape_response_parser_feed(struct descape_response_parser *p, const uint8_t c,
             next = d_dot_cr(p, c, b);
             break;
         case response_byte:
-            next = d_byte(p, c);
+            next = d_byte(p, c, b);
             break;
         case response_cr:
-            next = d_cr(p, c);
+            next = d_cr(p, c, b);
             break;
         case response_done:
             next = response_done;
@@ -107,7 +107,6 @@ descape_response_consume(buffer *rb, buffer *wb, struct descape_response_parser 
     while(buffer_can_read(rb)){
         const  uint8_t c = buffer_read(rb);
         st = descape_response_parser_feed(p, c, wb);
-        buffer_write(wb, c);
         p->response_size_i++;
     }
     return st;
