@@ -115,6 +115,7 @@ struct transform_st {
 
     bool                    descape_done;
     bool                    escape_done;
+    bool                    transform_error;
 
     struct escape_response_parser   escape;
     struct descape_response_parser  descape;
@@ -1219,6 +1220,7 @@ transform_init(const unsigned state, struct selector_key *key) {
     t->should_parse        = true;
     t->descape_done        = false;
     t->escape_done         = false;
+    t->transform_error     = false;
     t->termination_bytes   = 0;
 
     printf("Transforming response for %s request for user %s\n",
@@ -1231,39 +1233,20 @@ transform_interests(struct transform_st *t, struct selector_key *key) {
     struct pop3 *pop = ATTACHMENT(key);
     buffer  *rb   = t->rb;
     buffer  *wb   = t->wb;
+    buffer  *t_wb = t->t_wb;
 
     fd_interest origin = compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
-    fd_interest client = compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
+    fd_interest client = compute_write_interests(key->s, t_wb, OP_WRITE, pop->client_fd);
+    if(client == OP_NOOP) {
+        compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
+    }
 
     if(t->transform_needed) {
-        compute_read_interests(key->s, wb, OP_READ, pop->transformation_read);
+        compute_read_interests(key->s, t_wb, OP_READ, pop->transformation_read);
         compute_write_interests(key->s, rb, OP_WRITE, pop->transformation_write);
     }
 
-    compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
-
     return TRANSFORM;
-//    struct pop3 *pop = ATTACHMENT(key);
-//    buffer  *rb   = t->rb;
-//    buffer  *wb   = t->wb;
-//    unsigned ret;
-//
-//    fd_interest origin = compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
-//    fd_interest client = compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
-//
-//    if(t->transform_needed) {
-//        compute_read_interests(key->s, t_wb, OP_READ, pop->transformation_read);
-//        compute_write_interests(key->s, t_rb, OP_WRITE, pop->transformation_write);
-//    }
-//
-//    if(client == OP_NOOP && origin == OP_NOOP) {
-//        compute_read_interests(key->s, &pop->request_r_buffer, OP_READ, pop->client_fd);
-//        compute_write_interests(key->s, &pop->request_w_buffer, OP_WRITE, pop->origin_fd);
-//        ret = REQUEST;
-//    } else {
-//        ret = TRANSFORM;
-//    }
-//    return ret;
 }
 
 static unsigned
@@ -1309,7 +1292,7 @@ transform_write(struct selector_key *key) {
     unsigned ret = TRANSFORM;
     enum response_state st;
 
-    if(t->transform_needed && t->should_parse) {
+    if(t->transform_needed && t->should_parse && !t->transform_error) {
         enum response_state escape_st = response_byte;
         buffer_write_ptr(wb, &count);
         while(buffer_can_read(tb) && count >= 2) {
@@ -1358,13 +1341,17 @@ transform_write(struct selector_key *key) {
 
     while(buffer_can_parse(rb) && t->should_parse) {
         st = response_consume(rb, parser);
-        if(t->transform_needed == false && st == response_new_line) {
+        if(t->transform_needed == false && st == response_new_line && !t->transform_error) {
             t->transform_needed = parser->pop3_response_success ? true : false;
-            open_transformation(key);
-            response_close(parser);
-            descape_response_parser_init(&t->descape);
-            escape_response_parser_init(&t->escape);
-            t->should_parse = false;
+            t->transform_error = open_transformation(key) != OK;
+            if(!t->transform_error && t->transform_needed) {
+                response_close(parser);
+                descape_response_parser_init(&t->descape);
+                escape_response_parser_init(&t->escape);
+                t->should_parse = false;
+            } else {
+                t->should_parse = true;
+            }
             break;
         }
         if(response_is_done(st, 0)) {
