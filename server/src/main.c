@@ -97,7 +97,7 @@ main(const int argc, char * const *argv){
         goto finally;
     }
 
-    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
+    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
     if(spcp_server < 0){
         err_msg = "unable to create spcp_server socket";
         goto finally;
