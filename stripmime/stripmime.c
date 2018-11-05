@@ -27,6 +27,9 @@
  * @param namefnc  obtiene el nombre de un tipo de evento
  * @param e        evento que se quiere imprimir
  */
+
+struct parser_definition boundry_parser_definition;
+
 static void
 debug(const char *p,
       const char * (*namefnc)(unsigned),
@@ -496,10 +499,10 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
                     strcat(border, "--");
                     strcat(border, ctx->boundaries[ctx->boundaries_n-1]);
                     printf("\nB- %s -B\n", border);
-                    struct parser_definition border_def = parser_utils_strcmpi(border);
                     if(ctx->boundaries_n > 0) {
                         //ctx->boundary_border = parser_boundary_border_redefine(ctx->boundary_border, ctx->boundaries[ctx->boundaries_n-1]);
-                        boundary_parser_init(ctx->boundary_border, &border_def);
+                        boundry_parser_definition = parser_utils_strcmpi(border);
+                        boundary_parser_init(ctx->boundary_border, &boundry_parser_definition);
                     }
                     //ctx->boundary_border = parser_init(init_char_class(), &border_def);
                     //ctx->boundary_border = parser_boundary_border_redefine(ctx->boundaries[ctx->boundaries_n-1]);
