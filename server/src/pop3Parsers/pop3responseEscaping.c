@@ -63,48 +63,22 @@ escape_response_parser_feed(struct escape_response_parser *p, const uint8_t c, b
 }
 
 extern void
-escape_response_parser_init(struct escape_response_parser *p, size_t response_size) {
+escape_response_parser_init(struct escape_response_parser *p) {
     p->response_state = response_new_line;
-    p->response_size_i = 0;
-    p->response_size_n = response_size;
-}
-
-extern bool
-escape_response_is_done(struct escape_response_parser *p) {
-    return p->response_size_n <= p->response_size_i;
 }
 
 
 enum response_state
-escape_response_consume(buffer *rb, buffer *wb, struct escape_response_parser *p, bool *errored) {
+escape_response_consume(buffer *rb, buffer *wb, struct escape_response_parser *p) {
     enum response_state st = p->response_state;
-    size_t n;
-    buffer_write_ptr(wb, &n);
-    //TODO: Cuidado que pueden quedar cosas colgadas en el readbuffer. Probablemente debemos loopear exteriormente.
-    while(buffer_can_read(rb) && n > 2){
-        const  uint8_t c = buffer_read(rb);
-        st = escape_response_parser_feed(p, c, wb);
-        buffer_write(wb, c);
-        p->response_size_i++;
-        buffer_write_ptr(wb, &n);
-    }
+    const  uint8_t c = buffer_read(rb);
+    st = escape_response_parser_feed(p, c, wb);
+    buffer_write(wb, c);
     return st;
 }
 
 void
 escape_response_close(struct escape_response_parser *p) {
     //nada que hacer
-}
-
-int
-response_add_termination(buffer *wb) {
-    size_t n;
-    uint8_t *ptr = buffer_write_ptr(wb, &n);
-    if(n < 5){
-        return -1;
-    } else {
-        memcpy(ptr, "\r\n.\r\n", 5);
-    }
-    return 5;
 }
 

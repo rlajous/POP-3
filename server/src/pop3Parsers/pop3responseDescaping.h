@@ -12,4 +12,16 @@ struct descape_response_parser {
     size_t response_size_n;
 };
 
+extern void
+descape_response_parser_init(struct descape_response_parser *p);
+
+extern bool
+descape_response_is_done(struct descape_response_parser *p);
+
+enum response_state
+descape_response_consume(buffer *rb, buffer *wb, struct descape_response_parser *p);
+
+void
+descape_response_close(struct descape_response_parser *p);
+
 #endif //PROJECT_POP3RESPONSEDESCAPING_H

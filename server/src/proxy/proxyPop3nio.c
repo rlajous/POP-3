@@ -17,6 +17,8 @@
 #include "../utils/parser.h"
 #include "../utils/parser_utils.h"
 #include "../utils/metrics.h"
+#include "../pop3Parsers/pop3responseDescaping.h"
+#include "../pop3Parsers/pop3responseEscaping.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -102,7 +104,7 @@ struct response_st {
     fd_interest             duplex;
     struct response_st      *other;
     struct request_queue    *request_queue;
-
+    bool                    should_parse;
 };
 
 struct transform_st {
@@ -111,6 +113,14 @@ struct transform_st {
     bool                    transformation_done;
     struct request_queue    *request_queue;
     bool                    transform_needed;
+    bool                    should_parse;
+
+    bool                    descape_done;
+    bool                    escape_done;
+
+    struct escape_response_parser   escape;
+    struct descape_response_parser  descape;
+    size_t                  termination_bytes;
 };
 
 struct append_capa_st {
@@ -120,6 +130,7 @@ struct append_capa_st {
     struct request_queue    *request_queue;
     bool                    append_needed;
     size_t                  sent_bytes;
+    bool                    should_parse;
 };
 
 struct pop3 {
@@ -766,7 +777,7 @@ hello_write(struct selector_key *key) {
     ssize_t  n;
 
     enum response_state st;
-    while(buffer_can_parse(d->buffer)) {
+    while(buffer_can_parse(d->buffer) && !d->done) {
         st = response_consume(buffer, &d->response);
         if(response_is_done(st, 0)){
             response_close(&d->response);
@@ -776,11 +787,12 @@ hello_write(struct selector_key *key) {
 
     ptr = buffer_parse_ptr(d->buffer, &count);
     n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+    proxy_metrics->bytes += n;
     if(n == -1) {
         ret = ERROR;
     } else {
         buffer_read_adv(d->buffer, n);
-        if(d->done) {
+        if(!buffer_can_read_parsed(buffer) && d->done) {
             selector_status s = SELECTOR_SUCCESS;
             s |= selector_set_interest_key(key, OP_NOOP);
             s |= selector_set_interest    (key->s, p->origin_fd, OP_WRITE);
@@ -963,6 +975,7 @@ request_write(struct selector_key *key) {
     } else {
         buffer_read_adv(b, n);
         request->length -= n;
+        proxy_metrics->bytes += n;
 
         if(!p->pipeliner) {
             if(complete_request) {
@@ -999,6 +1012,7 @@ response_init(const unsigned state, struct selector_key *key) {
     d->duplex    = OP_READ | OP_WRITE;
     d->other     = &p->origin.response;
     d->request_queue = p->request_queue;
+    d->should_parse = true;
 
     d = &p->origin.response;
     d->fd       = &p->origin_fd;
@@ -1007,6 +1021,7 @@ response_init(const unsigned state, struct selector_key *key) {
     d->duplex   = OP_READ | OP_WRITE;
     d->other    = &p->client.response;
     d->request_queue = p->request_queue;
+    d->should_parse = true;
     response_parser_init(&d->parser, pop_request(d->request_queue));
 }
 
@@ -1114,7 +1129,7 @@ response_write(struct selector_key *key){
   }
 
   enum response_state st;
-  while(buffer_can_parse(buffer)) {
+  while(buffer_can_parse(buffer) && d->should_parse) {
     st = response_consume(buffer, parser);
     if(response_is_done(st, 0)) {
       if(parser->request->cmd == user && parser->pop3_response_success == true && !locked_usr) {
@@ -1138,12 +1153,15 @@ response_write(struct selector_key *key){
         request = pop_request(queue);
         response_parser_init(parser, request);
       }
+    } else {
+      d->should_parse = false;
+      break;
     }
-    break;
   }
 
   ptr = buffer_parse_ptr(buffer, &count);
   n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+  proxy_metrics->bytes += n;
 
   if(n == -1) {
     ret = ERROR;
@@ -1192,6 +1210,10 @@ transform_init(const unsigned state, struct selector_key *key) {
     t->transformation_done = false;
     t->transform_needed    = false;
     t->parser              = p->origin.response.parser;
+    t->should_parse        = true;
+    t->descape_done        = false;
+    t->escape_done         = false;
+    t->termination_bytes   = 0;
 
     printf("Transforming response for %s request for user %s\n",
            POP3_CMDS_INFO[t->parser.request->cmd].string_representation,
@@ -1265,29 +1287,51 @@ static unsigned
 transform_write(struct selector_key *key) {
     struct pop3         *pop = ATTACHMENT(key);
     struct transform_st *t   = &pop->transform;
+    struct escape_response_parser *e_parser = &t->escape;
 
     buffer  *rb  = t->rb;
     buffer  *wb  = t->wb;
+    buffer  *tb  = t->t_wb;
     uint8_t *ptr;
     size_t  count;
     ssize_t  n;
     struct response_parser *parser = &t->parser;
     struct request_queue   *queue  = t->request_queue;
     struct request         *request;
+    char                   *termination  =  "\r\n.\r\n";
 
     unsigned ret = TRANSFORM;
     enum response_state st;
 
-    if(t->transform_needed) {
+    if(t->transform_needed && t->should_parse) {
+        enum response_state escape_st = response_byte;
+        buffer_write_ptr(wb, &count);
+        while(buffer_can_read(tb) && count >= 2) {
+            escape_response_consume(tb, wb, e_parser);
+            buffer_write_ptr(wb, &count);
+        }
+
       ptr = buffer_read_ptr(wb, &count);
       n = send(key->fd, ptr, count, MSG_NOSIGNAL);
+      proxy_metrics->bytes += n;
 
       if(n == -1) {
         ret = ERROR;
       } else {
         buffer_read_adv(wb, n);
 
-        if(t->transformation_done && !buffer_can_read(wb)) {
+        if(t->transformation_done && !buffer_can_read(wb) && !buffer_can_read(tb)) {
+            if(!t->escape_done) {
+                while(buffer_can_write(wb)) {
+                    buffer_write(wb,termination[t->termination_bytes]);
+                    t->termination_bytes++;
+                    if(t->termination_bytes == strlen(termination)) {
+                        t->escape_done = true;
+                    }
+                }
+                return transform_interests(t, key);
+            }
+
             printf("Finished transformation \n");
           if(queue_is_empty(queue)) {
             selector_set_interest(key->s, pop->client_fd, OP_READ);
@@ -1305,15 +1349,19 @@ transform_write(struct selector_key *key) {
       return ret;
     }
 
-    while(buffer_can_parse(rb)) {
+    while(buffer_can_parse(rb) && t->should_parse) {
         st = response_consume(rb, parser);
         if(t->transform_needed == false && st == response_new_line) {
             t->transform_needed = parser->pop3_response_success ? true : false;
             open_transformation(key);
+            response_close(parser);
+
+            t->should_parse = false;
             break;
         }
         if(response_is_done(st, 0)) {
             response_close(parser);
+            t->should_parse = false;
             break;
         }
     }
@@ -1325,6 +1373,10 @@ transform_write(struct selector_key *key) {
         ret = ERROR;
     } else {
         buffer_read_adv(rb, n);
+
+        if(t->transform_needed && !buffer_can_read_parsed(rb)) {
+            t->should_parse = true;
+        }
 
         if(response_is_done(t->parser.response_state, 0) && !buffer_can_read_parsed(rb)) {
           if(queue_is_empty(queue)) {
@@ -1478,19 +1530,19 @@ transf_read(struct selector_key *key) {
     struct pop3         *p = ATTACHMENT(key);
     struct transform_st *t = &p->transform;
 
-    buffer  *b = t->wb;
+    buffer  *tb = t->t_wb;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
 
-    ptr = buffer_write_ptr(b, &count);
+    ptr = buffer_write_ptr(tb, &count);
     n = read(p->transformation_read, ptr, count);
     if (n <= 0) {
         t->transformation_done = true;
         selector_set_interest(key->s, p->client_fd, OP_WRITE);
         selector_set_interest(key->s, p->transformation_read, OP_NOOP);
     } else {
-        buffer_write_adv(b, n);
+        buffer_write_adv(tb, n);
         selector_set_interest(key->s, p->client_fd, OP_WRITE);
     }
 }
@@ -1499,27 +1551,31 @@ static void
 transf_write(struct selector_key *key) {
     struct pop3         *p = ATTACHMENT(key);
     struct transform_st *t = &p->transform;
-    struct response_parser *parser = &t->parser;
+    struct descape_response_parser *parser = &t->descape;
 
-    buffer  *b = t->rb;
+    buffer  *b  = t->rb;
+    buffer  *tb = t->t_rb;
     uint8_t *ptr;
     size_t count;
     ssize_t n;
 
     enum response_state st = response_byte;
-    while(buffer_can_parse(b)) {
-        st = response_consume(b, parser);
-        if(response_is_done(st, 0)) {
-            response_close(parser);
+    buffer_write_ptr(tb, &count);
+
+    while(buffer_can_read(b) && count >= 2 && !t->descape_done) {
+        buffer_write_ptr(tb, &count);
+        st = descape_response_consume(b, tb, parser);
+        if(descape_response_is_done(parser)) {
+            descape_response_close(parser);
+            t->descape_done = true;
             break;
         }
     }
 
-    ptr = buffer_parse_ptr(b, &count);
+    ptr = buffer_read_ptr(tb, &count);
     n = write(key->fd, ptr, count);
 
     if (n > 0) {
-        proxy_metrics->bytes += n;
 
         buffer_read_adv(b, n);
         transform_interests(t, key);
@@ -1529,7 +1585,7 @@ transf_write(struct selector_key *key) {
         selector_set_interest(key->s, p->client_fd, OP_WRITE);
     }
 
-    if(response_is_done(st, 0) && !buffer_can_read_parsed(b)) {
+    if(!buffer_can_read(tb) && !buffer_can_read(b) && t->descape_done) {
         selector_unregister_fd(key->s, p->transformation_write);
         close(p->transformation_write);
     }
@@ -1609,6 +1665,7 @@ append_capa_init(const unsigned state, struct selector_key *key) {
     a->append_needed       = false;
     a->parser              = p->origin.response.parser;
     a->sent_bytes          = 0;
+    a->should_parse        = true;
 }
 
 
@@ -1629,7 +1686,6 @@ append_capa_read(struct selector_key *key) {
         buffer_write_adv(rb, n);
         compute_read_interests(key->s, rb, OP_READ, pop->origin_fd);
         compute_write_interests(key->s, rb, OP_WRITE, pop->client_fd);
-//        compute_write_interests(key->s, wb, OP_WRITE, pop->client_fd);
     } else {
         return ERROR;
     }
@@ -1673,7 +1729,7 @@ append_capa_write(struct selector_key *key) {
         return ret;
     }
 
-    while(buffer_can_parse(rb)) {
+    while(buffer_can_parse(rb) && a->should_parse) {
         st = response_consume(rb, parser);
         if(a->append_needed == false && st == response_new_line && !a->capa_done) {
             a->append_needed = parser->pop3_response_success ? true : false;
@@ -1681,6 +1737,7 @@ append_capa_write(struct selector_key *key) {
         }
         if(response_is_done(st, 0)) {
             response_close(parser);
+            a->should_parse = false;
             break;
         }
     }
