@@ -14,8 +14,6 @@ int handleBufferSize(int connSock);
 
 int handleTransformationChange(int connSock);
 
-int handleTimeOut(int connSock);
-
 int handleQuit(int connSock);
 
 int handleHistoricAccess(int connSock);
