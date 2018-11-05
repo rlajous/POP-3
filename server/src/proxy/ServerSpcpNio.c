@@ -555,7 +555,7 @@ set_transformation(struct buffer *b, struct spcp_request *request, enum spcp_res
 
     char new_command[request->arg0_size + 1];
     memcpy(new_command, request->arg0, request->arg0_size);
-    new_command[request->arg0_size + 1] = '\0';
+    new_command[request->arg0_size] = '\0';
     proxyArguments->command = modify_string(proxyArguments->command, new_command);
 
     if( -1 == spcp_no_data_request_marshall(b, spcp_success)) {

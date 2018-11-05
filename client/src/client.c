@@ -9,9 +9,12 @@
 #include "common.h"
 #include <netinet/sctp.h>
 #include <stdbool.h>
+#include <ctype.h>
+#include <netdb.h>
+#include <limits.h>
+#include <errno.h>
 #include "handler.h"
 
-#define PROXY_SCTP_PORT 9090
 #define DEFAULT_PORT 9090
 #define DEFAULT_IP "127.0.0.1"
 
@@ -21,8 +24,20 @@ union ans {
 };
 
 typedef union ans *answer;
-int validIpAddress(char *ipAddress);
 void clean(uint8_t *buf);
+static uint16_t parse_port(const char * port);
+bool resolve_address(char *address, uint16_t port, struct addrinfo ** addrinfo);
+
+static void
+print_usage() {
+  printf("SCPC Client implementation \n");
+  printf("Usage: spcpClient [POSIX STYLE OPTIONS]\n\n");
+  printf("Options:\n");
+  printf("%-30s", "\t-L config-address");
+  printf("Specifies the address where the management service will be listening. By default it listens in loopback\n");
+  printf("%-30s", "\t-o management-port");
+  printf("SCTP port where the management server is listening. By default is 9090\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -38,68 +53,58 @@ int main(int argc, char *argv[])
   clean(buffer);
   position = 0;
 
-  int port;
-  char address[16];
-  if (argc == 3)
-  {
-    int port_in = atoi(argv[2]);
-    if (validIpAddress(argv[1]))
-    {
-      strcpy(address, argv[1]);
-    }
-    else
-    {
-      printf(" Bad IP argument, using default value.\n");
-      strcpy(address, DEFAULT_IP);
-    }
-    if (port_in > 1024 && port_in < 60000)
-    {
-      port = port_in;
-    }
-    else
-    {
-      printf(" Bad PORT argument, using default value.\n");
-      port = DEFAULT_PORT;
-    }
-  }
-  else if (argc == 2)
-  {
-    int port_in = atoi(argv[1]);
-    strcpy(address, DEFAULT_IP);
-    if (port_in > 1024 && port_in < 60000)
-    {
-      port = port_in;
-    }
-    else
-    {
-      printf(" Bad PORT argument, using default value.\n");
-      port = DEFAULT_PORT;
+  uint16_t port = DEFAULT_PORT;
+  char *address = DEFAULT_IP;
+  int c;
+  opterr = 0;
+  size_t size;
+
+  while ((c = getopt (argc, argv, "L:o:")) != -1) {
+    switch (c) {
+      case 'L':
+        size = strlen(optarg);
+        address = malloc(size);
+        memcpy(address, optarg, size);
+        break;
+      case 'o':
+        port = parse_port(optarg);
+        break;
+      case '?':
+        if (optopt == 'L' || optopt == 'o') {
+          fprintf(stderr, "Option -%c requires an argument.\n",
+                  optopt);
+        }
+        else if (isprint(optopt)) {
+          fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+        }
+        else {
+          fprintf(stderr,
+                  "Unknown option character `\\x%x'.\n",
+                  optopt);
+        }
+        exit(1);
+      default:
+        print_usage();
+        exit(1);
     }
   }
-  else
-  {
-    if (argc == 1)
-      printf(" No arguments, using default values.\n");
-    else
-      printf(" Bad arguments, using default values.\n");
-    strcpy(address, DEFAULT_IP);
-    port = DEFAULT_PORT;
+
+  struct addrinfo *addr;
+  if(!resolve_address(address, port, &addr)) {
+    perror("Unable to resolve address");
+    exit(1);
   }
+
   printf(" Trying to connect to %s:%d\n", address, port);
 
-  connSock = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+  connSock = socket(addr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
 
   if (connSock == -1)
   {
     exit(0);
   }
 
-  bzero((void *)&servaddr, sizeof(servaddr));
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_port = htons(port);
-  servaddr.sin_addr.s_addr = inet_addr(address);
-
-  ret = connect(connSock, (struct sockaddr *)&servaddr, sizeof(servaddr));
+  ret = connect(connSock, addr->ai_addr, addr->ai_addrlen);
 
   if (ret < 0)
   {
@@ -140,7 +145,7 @@ int main(int argc, char *argv[])
             readUser = false;
           }
         }
-        printf(" Enter Password \n");
+        printf("Enter Password \n");
         while (readPass) {
           if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
             sscanf(buffer, "%s", first);
@@ -193,9 +198,6 @@ int main(int argc, char *argv[])
             handleTransformationChange(connSock);
             break;
           case 7:
-            handleTimeOut(connSock);
-            break;
-          case 8:
             exit = handleQuit(connSock);
             break;
           default:
@@ -218,12 +220,42 @@ void clean(uint8_t *buf)
   {
     buf[i] = 0;
   }
-  return;
 }
 
-int validIpAddress(char *ipAddress)
-{
-  struct sockaddr_in sa;
-  int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
-  return result != 0;
+static uint16_t
+parse_port(const char * port) {
+
+  char *end     = 0;
+  const long sl = strtol(port, &end, 10);
+
+  if (end == port || '\0' != *end
+      || ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
+      || sl < 0 || sl > USHRT_MAX) {
+    fprintf(stderr, "Error: Argument port %s should be an integer\n", port);
+    exit(1);
+  }
+
+  return (uint16_t) sl;
+}
+
+bool
+resolve_address(char *address, uint16_t port, struct addrinfo ** addrinfo) {
+
+  struct addrinfo addr = {
+          .ai_family    = AF_UNSPEC,    /* Allow IPv4 or IPv6 */
+          .ai_socktype  = SOCK_STREAM,
+          .ai_flags     = AI_PASSIVE,   /* For wildcard IP address */
+          .ai_protocol  = 0,            /* Any protocol */
+          .ai_canonname = NULL,
+          .ai_addr      = NULL,
+          .ai_next      = NULL,
+  };
+
+  char buff[7];
+  snprintf(buff, sizeof(buff), "%hu", port);
+  if (0 != getaddrinfo(address, buff, &addr,
+                       addrinfo)){
+    return false;
+  }
+  return true;
 }

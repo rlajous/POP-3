@@ -29,7 +29,7 @@ bool
 response_is_done(enum response_state st, bool *errored);
 
 enum response_state
-response_consume(buffer *rb, buffer *wb, struct response_parser *p, bool *errored);
+response_consume(buffer *rb, struct response_parser *p);
 
 enum response_state
 response_parser_feed(struct response_parser *p, uint8_t c);

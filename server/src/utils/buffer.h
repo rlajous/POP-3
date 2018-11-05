@@ -93,6 +93,9 @@ struct buffer {
 
     /** puntero de escritura */
     uint8_t *write;
+
+    /** puntero de parsing */
+    uint8_t *parsing;
 };
 
 /**
@@ -115,11 +118,20 @@ buffer_read_ptr(buffer *b, size_t *nbyte);
 void
 buffer_read_adv(buffer *b, const ssize_t bytes);
 
+uint8_t *
+buffer_parse_ptr(buffer *b, size_t *nbyte);
+
+void
+buffer_parse_adv(buffer *b, const ssize_t bytes);
+
 /**
  * obtiene un byte
  */
 uint8_t
 buffer_read(buffer *b);
+
+uint8_t
+buffer_parse(buffer *b);
 
 /** escribe un byte */
 void
@@ -131,6 +143,9 @@ buffer_write(buffer *b, uint8_t c);
 void
 buffer_compact(buffer *b);
 
+bool
+buffer_can_parse(buffer *b);
+
 /**
  * Reinicia todos los punteros
  */
@@ -140,6 +155,9 @@ buffer_reset(buffer *b);
 /** retorna true si hay bytes para leer del buffer */
 bool
 buffer_can_read(buffer *b);
+
+bool
+buffer_can_read_parsed(buffer *b);
 
 /** retorna true si se pueden escribir bytes en el buffer */
 bool

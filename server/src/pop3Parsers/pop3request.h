@@ -145,6 +145,10 @@ static struct pop3_cmd_data POP3_CMDS_INFO[] ={
           .max_args               = 1,
           .min_args               = 1,
           .multi                  = false,
+        },
+        {
+          .request_cmd            = unknown,
+          .string_representation  = "unknown",
         }
 
 };
@@ -176,7 +180,7 @@ request_parser_feed (struct request_parser *p, const uint8_t c);
  *   si el parsing se debió a una condición de error
  */
 enum request_state
-request_consume(buffer *rb, buffer *wb, struct request_parser *p, bool *errored, struct request_queue *q);
+request_consume(buffer *rb, struct request_parser *p, bool *errored, struct request_queue *q);
 
 /**
  * Permite distinguir a quien usa socks_hello_parser_feed si debe seguir
