@@ -178,8 +178,10 @@ struct pop3 {
     /** buffers para ser usados read_buffer, write_buffer.*/
     uint8_t *request_r;
     uint8_t *response_r, *response_w;
+    uint8_t *transform_r, *transform_w;
     buffer request_buffer;
     buffer response_r_buffer, response_w_buffer;
+    buffer transform_r_buffer, transform_w_buffer;
 
     struct request_queue *request_queue;
 
@@ -243,10 +245,14 @@ static struct pop3 * pop3_new(int client_fd){
     ret->request_r      = malloc(BUFFER_SIZE);
     ret->response_r     = malloc(BUFFER_SIZE);
     ret->response_w     = malloc(BUFFER_SIZE);
+    ret->transform_r    = malloc(BUFFER_SIZE);
+    ret->transform_w    = malloc(BUFFER_SIZE);
 
     buffer_init(&ret->request_buffer  , BUFFER_SIZE, ret->request_r);
     buffer_init(&ret->response_r_buffer , BUFFER_SIZE, ret->response_r);
     buffer_init(&ret->response_w_buffer , BUFFER_SIZE, ret->response_w);
+    buffer_init(&ret->transform_r_buffer , BUFFER_SIZE, ret->transform_r);
+    buffer_init(&ret->transform_w_buffer , BUFFER_SIZE, ret->transform_w);
 
     ret->request_queue = malloc(sizeof(struct request_queue));
     queue_init(ret->request_queue);
@@ -1152,10 +1158,10 @@ response_write(struct selector_key *key){
                (p->username == NULL ? "unknown" : p->username));
         request = pop_request(queue);
         response_parser_init(parser, request);
+      } else {
+          d->should_parse = false;
+          break;
       }
-    } else {
-      d->should_parse = false;
-      break;
     }
   }
 
@@ -1204,8 +1210,8 @@ transform_init(const unsigned state, struct selector_key *key) {
 
     t->rb                  = &p->response_r_buffer;
     t->wb                  = &p->response_w_buffer;
-//    t->t_rb                = &p->transform_r_buffer;
-//    t->t_wb                = &p->transform_w_buffer;
+    t->t_rb                = &p->transform_r_buffer;
+    t->t_wb                = &p->transform_w_buffer;
     t->request_queue       = p->request_queue;
     t->transformation_done = false;
     t->transform_needed    = false;
@@ -1298,7 +1304,7 @@ transform_write(struct selector_key *key) {
     struct response_parser *parser = &t->parser;
     struct request_queue   *queue  = t->request_queue;
     struct request         *request;
-    char                   *termination  =  "\r\n.\r\n";
+    char                   *termination  =  ".\r\n";
 
     unsigned ret = TRANSFORM;
     enum response_state st;
@@ -1327,6 +1333,7 @@ transform_write(struct selector_key *key) {
                     t->termination_bytes++;
                     if(t->termination_bytes == strlen(termination)) {
                         t->escape_done = true;
+                        break;
                     }
                 }
                 return transform_interests(t, key);
@@ -1355,7 +1362,8 @@ transform_write(struct selector_key *key) {
             t->transform_needed = parser->pop3_response_success ? true : false;
             open_transformation(key);
             response_close(parser);
-
+            descape_response_parser_init(&t->descape);
+            escape_response_parser_init(&t->escape);
             t->should_parse = false;
             break;
         }
@@ -1577,7 +1585,7 @@ transf_write(struct selector_key *key) {
 
     if (n > 0) {
 
-        buffer_read_adv(b, n);
+        buffer_read_adv(tb, n);
         transform_interests(t, key);
     } else if (n == -1 || n == 0) {
         selector_set_interest_key(key, OP_NOOP);
