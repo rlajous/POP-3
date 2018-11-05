@@ -13,7 +13,7 @@ struct parser {
     /** tipificación para cada caracter */
     const unsigned     *classes;
     /** definición de estados */
-    const struct parser_definition *def;
+    struct parser_definition *def;
 
     /* estado actual */
     unsigned            state;
@@ -37,6 +37,13 @@ boundary_parser_init(struct parser *p,
     p->def     = def;
     p->state   = def->start_state;
     return p;
+}
+
+
+void
+boundary_parser_init(struct parser *parser, struct parser_definition *def) {
+    parser->def = def;
+    parser->state = def->start_state;
 }
 
 struct parser *

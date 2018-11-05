@@ -48,14 +48,14 @@ enum { ANY = 1 << 9 };
 /** declaración completa de una máquina de estados */
 struct parser_definition {
     /** cantidad de estados */
-    const unsigned                         states_count;
+    unsigned                         states_count;
     /** por cada estado, sus transiciones */
-    const struct parser_state_transition **states;
+    struct parser_state_transition **states;
     /** cantidad de estados por transición */
-    const size_t                          *states_n;
+    size_t                          *states_n;
 
     /** estado inicial */
-    const unsigned                         start_state;
+    unsigned                         start_state;
 };
 
 struct parser *
@@ -93,6 +93,9 @@ parser_feed     (struct parser *p, const uint8_t c);
  */
 const unsigned *
 parser_no_classes(void);
+
+void
+boundary_parser_init(struct parser *parser, struct parser_definition *def);
 
 
 #endif
