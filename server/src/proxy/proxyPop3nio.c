@@ -1078,7 +1078,7 @@ response_read(struct selector_key *key) {
         shutdown(*d->fd, SHUT_RD);
         d->duplex &= ~OP_READ;
         if(*d->other->fd != -1) {
-            shutdown(*d->other->fd, SHUT_WR);
+            close(*d->other->fd);
             d->other->duplex &= ~OP_WRITE;
         }
 
