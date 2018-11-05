@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
             readUser = false;
           }
         }
-        printf(" Enter Password \n");
+        printf("Enter Password \n");
         while (readPass) {
           if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
             sscanf(buffer, "%s", first);
