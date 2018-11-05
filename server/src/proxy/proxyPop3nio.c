@@ -89,7 +89,6 @@ struct error_st {
 
 struct request_st {
     buffer                  *buffer;
-    struct request_parser   parser;
     int                     *fd;
     fd_interest             duplex;
     struct request_st       *other;
@@ -99,7 +98,6 @@ struct request_st {
 
 struct response_st {
     buffer                  *wb, *rb;
-    struct response_parser  parser;
     int                     *fd;
     fd_interest             duplex;
     struct response_st      *other;
@@ -168,6 +166,10 @@ struct pop3 {
         struct response_st  response;
         struct error_st     error;
     } client;
+
+    struct response_parser  response_parser;
+    struct request_parser   request_parser;
+
     /** estados para el origin_fd */
     union {
         struct capa_st     capa;
@@ -602,7 +604,7 @@ capa_read_process(struct selector_key *key, uint8_t read) {
         s |= selector_set_interest    (key->s, p->client_fd, OP_READ);
         ret = SELECTOR_SUCCESS == s ? REQUEST : ERROR;
         if(ret == REQUEST) {
-            request_parser_init(&p->client.request.parser);
+            request_parser_init(&p->request_parser);
         }
     }
 
@@ -927,7 +929,7 @@ request_read(struct selector_key *key) {
 static void
 request_read_close(const unsigned state, struct selector_key *key) {
     struct request_st * d = &ATTACHMENT(key)->client.request;
-    request_close(&d->parser);
+    request_close(&ATTACHMENT(key)->request_parser);
 }
 
 static unsigned
@@ -936,7 +938,7 @@ request_write(struct selector_key *key) {
     struct request_st *d          = &p->origin.request;
     struct request_st *other      = d->other;
     struct request    *request    = NULL;
-    struct request_parser *parser = &d->other->parser;
+    struct request_parser *parser = &p->request_parser;
 
     unsigned ret = REQUEST;
     uint8_t *ptr;
@@ -1028,7 +1030,7 @@ response_init(const unsigned state, struct selector_key *key) {
     d->other    = &p->client.response;
     d->request_queue = p->request_queue;
     d->should_parse = true;
-    response_parser_init(&d->parser, pop_request(d->request_queue));
+    response_parser_init(&p->response_parser, pop_request(d->request_queue));
 }
 
 static void
@@ -1118,7 +1120,7 @@ response_write(struct selector_key *key){
     buffer  *buffer = d->rb;
     bool locked_usr = ATTACHMENT(key)->verified_username;
 
-    struct response_parser *parser = &other->parser;
+    struct response_parser *parser = &p->response_parser;
     struct request_queue   *queue  = d->request_queue;
     struct request         *request;
 
@@ -1176,15 +1178,15 @@ response_write(struct selector_key *key){
 
     if(!buffer_can_read_parsed(buffer) &&
        ((queue_is_empty(d->request_queue) && p->pipeliner) || (!p->pipeliner))
-       && response_is_done(other->parser.response_state, 0)) {
+       && response_is_done(p->response_parser.response_state, 0)) {
       compute_read_interests(key->s, &p->request_buffer, OP_READ, *d->fd);
       compute_write_interests(key->s, &p->request_buffer, OP_WRITE, *other->fd);
       ret = REQUEST;
     } else if(!buffer_can_read_parsed(buffer) &&
-              response_is_done(other->parser.response_state, 0) &&
+              response_is_done(p->response_parser.response_state, 0) &&
               (ret = determine_response_state(d->request_queue, key)) != RESPONSE) {
       request = pop_request(d->request_queue);
-      response_parser_init(&other->parser, request);
+      response_parser_init(&p->response_parser, request);
       selector_set_interest(key->s, *other->fd, OP_READ);
       selector_set_interest(key->s, *d->fd, OP_WRITE);
       return ret;
@@ -1215,7 +1217,7 @@ transform_init(const unsigned state, struct selector_key *key) {
     t->request_queue       = p->request_queue;
     t->transformation_done = false;
     t->transform_needed    = false;
-    t->parser              = p->origin.response.parser;
+    t->parser              = p->response_parser;
     t->should_parse        = true;
     t->descape_done        = false;
     t->escape_done         = false;
@@ -1671,7 +1673,7 @@ append_capa_init(const unsigned state, struct selector_key *key) {
     a->request_queue       = p->request_queue;
     a->capa_done           = false;
     a->append_needed       = false;
-    a->parser              = p->origin.response.parser;
+    a->parser              = p->response_parser;
     a->sent_bytes          = 0;
     a->should_parse        = true;
 }

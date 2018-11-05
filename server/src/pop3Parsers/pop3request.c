@@ -191,5 +191,3 @@ extern void
 request_close(struct request_parser *p) {
     //Creo que no hay nada que hacer.
 }
-
-//TODO(fran): habría que implementar el marshall?
