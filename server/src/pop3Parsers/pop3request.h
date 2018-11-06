@@ -61,7 +61,6 @@ struct pop3_cmd_data {
     bool                multi;
 };
 
-//TODO(fran) : No estoy seguro si ponerle static o no
 /** Array de datos sobre cada comando pop3 usado por el parser.
  *  El indice del array se correlaciona con el valor numérico del
  *  enum de pop3_req_cmd */

@@ -686,7 +686,6 @@ capa_write(struct selector_key *key) {
             }
         }
     } else {
-        //TODO: SEND ERROR MESSAGE
         ret = ERROR;
     }
 
@@ -978,7 +977,6 @@ request_write(struct selector_key *key) {
             shutdown(*d->other->fd, SHUT_RD);
             d->other->duplex &= ~OP_READ;
         }
-        //TODO: ESTO NO ES ERROR
         return ERROR;
     } else {
         buffer_read_adv(b, n);
@@ -1074,7 +1072,6 @@ response_read(struct selector_key *key) {
     if(n > 0) {
         buffer_write_adv(rb, n);
         ret = response_interests(key);
-    //TODO: Checkear temas de shutdown
     } else {
         shutdown(*d->fd, SHUT_RD);
         d->duplex &= ~OP_READ;
@@ -1150,7 +1147,7 @@ response_write(struct selector_key *key){
                POP3_CMDS_INFO[parser->request->cmd].string_representation,
                (p->username == NULL ? "unknown" : p->username));
       }
-        printf("sending response for %s command without transformation for user %s\n",
+        printf("sending response for %s command for user %s\n",
                POP3_CMDS_INFO[parser->request->cmd].string_representation,
                        (p->username == NULL ? "unknown" : p->username));
       response_close(parser);

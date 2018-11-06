@@ -254,7 +254,6 @@ user_process(struct selector_key *key) {
         spcp->username = realloc(spcp->username, spcp->parser.request.arg0_size +1);
     if(spcp->username == NULL){
         spcp->status = spcp_err;
-        //TODO: che facciamo?
     }
 
     memcpy(spcp->username, spcp->parser.request.arg0, spcp->parser.request.arg0_size);
@@ -315,7 +314,6 @@ user_write(struct selector_key *key) {
     ssize_t  n;
 
     ptr = buffer_read_ptr(wb, &count);
-    //TODO(fran): propperly handle SIGPIPE
     n = sctp_sendmsg(key->fd, ptr, count, 0, 0, 0, 0, 0, 0, 0 );
     if(n == -1) {
         ret = ERROR;
@@ -454,8 +452,9 @@ get_concurrent_connections(struct buffer *b,  enum spcp_response_status *status)
     unsigned data = proxy_metrics->concurrent_connections;
 
     int digits = 0;
-    while(data != 0) {
-        data /= 10;
+    unsigned long long aux = data;
+    while(aux != 0) {
+        aux /= 10;
         ++digits;
     }
     /// Add one for the null termination
@@ -474,8 +473,9 @@ get_transfered_bytes(struct buffer *b,  enum spcp_response_status *status) {
     unsigned long long data = proxy_metrics->bytes;
 
     int digits = 0;
-    while(data != 0) {
-        data /= 10;
+    unsigned long long aux = data;
+    while(aux != 0) {
+        aux /= 10;
         ++digits;
     }
     /// Add one for the null termination
@@ -494,8 +494,9 @@ get_historical_accesses(struct buffer *b, enum spcp_response_status *status) {
     unsigned long data = proxy_metrics->historic_connections;
 
     int digits = 0;
-    while(data != 0) {
-        data /= 10;
+    unsigned long long aux = data;
+    while(aux != 0) {
+        aux /= 10;
         ++digits;
     }
     /// Add one for the null termination
@@ -556,7 +557,12 @@ set_transformation(struct buffer *b, struct spcp_request *request, enum spcp_res
     char new_command[request->arg0_size + 1];
     memcpy(new_command, request->arg0, request->arg0_size);
     new_command[request->arg0_size] = '\0';
-    proxyArguments->command = modify_string(proxyArguments->command, new_command);
+
+    if(strcmp(new_command, "") == 0){
+        proxyArguments->command = NULL;
+    } else {
+        proxyArguments->command = modify_string(proxyArguments->command, new_command);
+    }
 
     if( -1 == spcp_no_data_request_marshall(b, spcp_success)) {
         return ERROR;
