@@ -29,7 +29,9 @@
     <area>Protocolos de Comunicación</area>
     <workgroup>Grupo 7</workgroup>
     <abstract>
-      <t>This memo blah blah blah....
+      <t>Este documento informa sobre el trabajo realizado para el trabajo practico especial de la
+        materia Protocolos de Comunicación por parte del grupo 7 del segundo cuatrimestre de 2018.
+        Se encontrara una descripcion completa del trabajo realizado junto con el analisis del mismo
       </t>
     </abstract>
   </front>
@@ -270,7 +272,7 @@
         <section title="Implementacion del servidor">
           <t>El servidor SPCP se implementa de manera no bloqueante y concurrente para poder permitir la
             ágil utilización del mismo por parte de multiples administradores. Para esto se utiliza una
-            estructura de servidor similar a la que se presenta en el <eref target="SocksV5">servidor
+            estructura de servidor similar a la que se presenta en el <eref target="1">servidor
             SocksV5</eref>. Se utiliza la estrategia de un selector el cual atiende a los file descriptors
             de los sockets mediante la funcion pselect.
           </t>
@@ -299,13 +301,24 @@
       </section>
       <section title="Proxy POP3">
         <section title="introducción">
-
+          <t>Al centro del trabajo practico se encuentra el proxy pop3. Se encarga de interactuar con el
+             servidor origen y el cliente. El proxy le permite al cleinte poder acceder a su casilla de
+             correo POP3 del servidor origen y beneficiarse del proxy. El cliente cuenta con soporte de
+             pipelining independientemente de la implementación del servidor origen y ademas todos sus
+             mensajes pasan por el proceso de transformación del proxy si este se encuentra activado.</t>
         </section>
         <section title="Resolución de nombres">
-
+          <t>El proxy cuenta con la capacidad de hacer resolucion de nombres sin blockearse, asi un usuario
+             del proxy no necesita conocer la ip de su servidor de origen sino que con su domain name basta.
+          </t>
+          <t>La resolución de nombres por su naturaleza es bloqueante, ya que debe realizar una consulta de
+             DNS, es por esto que TODO
+          </t>
         </section>
         <section title="Determinación de pipelining">
-
+          <t>Como el proxy implementa pipelining independientemente de si el servidor origen lo implementa
+             o no este debe poder detectar el
+          </t>
         </section>
         <section title="Implementacion de piplining con servidor no pipeliner">
 
@@ -322,6 +335,9 @@
       </section>
     </section>
     <section title="Problemas encontrados">
+      <section title="Determinación de pipelining">
+
+      </section>
       <section title="Piplinging con servidor de origen no pipeliner">
 
       </section>
@@ -335,6 +351,9 @@
 
       </section>
       <section title="escapado y desescapado al transform">
+
+      </section>
+      <section title="Resolución de nombres no bloqueante">
 
       </section>
     </section>
@@ -354,6 +373,9 @@
            Esto resulta inflexible al momento de agregar, modificar o quitar usuarios administradores ya
            que para esto se necesita bajar el servidor, cambiar el codigo fuente, recompilarlo y volverlo
           a subir</t>
+      </section>
+      <section title="Pipelining inutilizado">
+        <t>Segun el RFC TODO(agregar ref) </t>
       </section>
     </section>
     <section title="Posibles extensiones">
@@ -390,7 +412,7 @@
   </middle>
   <back>
     <references>
-      <reference anchor="SocksV5">
+      <reference target="1">
         <front>
           <title>Server Socks V5</title>
           <author fullname="Juan F. Codagnone" initials="J.F.C">
