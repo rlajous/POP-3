@@ -43,7 +43,7 @@ spcp_request_parser_init(struct spcp_request_parser *p) {
 
 static enum spcp_request_state
 parse_request_cmd(struct spcp_request_parser *p, const uint8_t c) {
-    if(c <= 0x09){
+    if(c <= 0x09 && c != 0x08){
         p->request.cmd = c;
         return spcp_request_nargs;
     }

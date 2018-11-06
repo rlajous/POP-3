@@ -76,9 +76,3 @@ escape_response_consume(buffer *rb, buffer *wb, struct escape_response_parser *p
     buffer_write(wb, c);
     return st;
 }
-
-void
-escape_response_close(struct escape_response_parser *p) {
-    //nada que hacer
-}
-

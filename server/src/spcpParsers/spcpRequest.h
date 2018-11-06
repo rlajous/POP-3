@@ -34,6 +34,9 @@
  *
  */
 
+
+
+/** Estados del parser de request spcp */
 enum spcp_request_state {
     spcp_request_cmd,
     spcp_request_nargs,
@@ -46,7 +49,7 @@ enum spcp_request_state {
     spcp_request_error_invalid_arguments,
     spcp_request_error,
 };
-
+/** Posibles respuestas del servidor spcp*/
 enum spcp_response_status {
     spcp_success                    = 0x00,
     spcp_auth_err                   = 0x01,
@@ -54,7 +57,7 @@ enum spcp_response_status {
     spcp_invalid_arguments          = 0x03,
     spcp_err                        = 0x04,
 };
-
+/** posibles comandos del servidor spcp*/
 enum spcp_request_cmd {
     spcp_user                       = 0x00,
     spcp_pass                       = 0x01,
@@ -64,10 +67,11 @@ enum spcp_request_cmd {
     spcp_active_transformation      = 0x05,
     spcp_set_buffer_size            = 0x06,
     spcp_change_transformation      = 0x07,
-    spcp_set_timeouts               = 0x08,
     spcp_quit                       = 0x09,
 };
 
+/** Estructira qie representa un request
+ * del servidor spcp*/
 struct spcp_request {
     enum spcp_request_cmd cmd;
     uint8_t *arg0;
@@ -76,8 +80,11 @@ struct spcp_request {
     size_t arg1_size;
 };
 
+/**Definicion del parser de request spcp*/
 struct spcp_request_parser {
+    /** El request que esta siendo parseado*/
     struct spcp_request         request;
+    /** Estado del parser*/
     enum   spcp_request_state   state;
     /** cantidad de argumentos */
     uint8_t nargs;
@@ -90,22 +97,30 @@ struct spcp_request_parser {
 
 
 };
-
+/** Consume el request del buffer pasandolo por el parser*/
 extern enum spcp_request_state
 spcp_request_consume(buffer *b, struct spcp_request_parser *p, bool *errored);
 
+/** Inicializa el parser de request spcp */
 extern void
 spcp_request_parser_init(struct spcp_request_parser *p);
 
+/** Serializa al buffer una respuesta apropiada al status
+ * de respuesta que se pasa por argumento*/
 extern int
 spcp_no_data_request_marshall(buffer *b, uint8_t status);
 
+/** Serializa al buffer una respuesta apropiada al status
+ * de respuesta agregando la data que se pasa por parametro*/
 extern int
 spcp_data_request_marshall(buffer *b, uint8_t status, char *data, size_t data_len);
 
+/** Cierra el parser de request*/
 extern void
 spcp_request_close(struct spcp_request_parser *p);
 
+/** En base al estado del parser indica si se termino de parsear un
+ * request*/
 extern bool
 spcp_request_is_done(enum spcp_request_state st, bool *errored);
 
