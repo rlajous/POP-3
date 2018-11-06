@@ -168,7 +168,6 @@ request_is_done(const enum request_state st, bool* errored) {
 
 static bool
 request_marshall(struct request_parser *p, struct request_queue *q) {
-    //TODO: RETURN ERROR
     queue_request(q, &p->request);
     return true;
 }
