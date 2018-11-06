@@ -85,9 +85,6 @@ mime_ctransfer_value_event(enum mime_ctransfer_value_event_type type) {
         case CTRANSFER_UNEXPECTED:
             ret = "error(c)";
             break;
-        default:
-            ret = "escribir";
-            break;
     }
     return ret;
 }

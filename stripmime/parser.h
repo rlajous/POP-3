@@ -58,10 +58,6 @@ struct parser_definition {
     unsigned                         start_state;
 };
 
-struct parser *
-boundary_parser_init(struct parser *p,
-            const struct parser_definition *def);
-
 /**
  * inicializa el parser.
  *

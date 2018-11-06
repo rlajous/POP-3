@@ -1,6 +1,1 @@
-Corregir: el \r\n.\r\n en body termina el parseo. Lo que me tiene que terminar el parseo es el cierre del pipe
-//TODO: que el encoding se borre cuando debe y se impriman los \r\n antes de los body's
-//TODO: redefinir el parser boundary_border
-//TODO: ver que hacer con los unexpected
-//TODO: sacar los "escribir" de los events cuando termine el stripmime
 //TODO: documentar que no contemplamos content-transfer-encoding antes de content-type (que haria el mensaje de reemplazo ilegible acualmente)

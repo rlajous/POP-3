@@ -125,9 +125,6 @@ mime_value_event(enum mime_value_event_type type) {
         case UNEXPECTED:
             ret = "error(c)";
             break;
-        default:
-            ret = "escribir";
-            break;
     }
     return ret;
 }

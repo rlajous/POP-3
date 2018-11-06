@@ -51,7 +51,7 @@ fin(struct parser_event *ret, const uint8_t c) {
 }
 
 static const struct parser_state_transition ST_NEWLINE[] =  {
-    {.when = '.',        .dest = DOT,         .act1 = byte,}, //cambio wait a byte 
+    //{.when = '.',        .dest = DOT,         .act1 = byte,}, //descomentar esto si se quiere manejar dot-stuffing 
     {.when = ANY,        .dest = BYTE,        .act1 = byte,},
 };
 

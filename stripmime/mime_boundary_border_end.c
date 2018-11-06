@@ -116,7 +116,7 @@ static const struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN_HYPHEN_CR
 };
 
 static const struct parser_state_transition ST_BORDER_END_VALUE_CR[] =  {
-    {.when = '\n',        .dest = VALUE_CR,       .act1 = end_crlf,  },
+    {.when = '\n',       .dest = VALUE_CR,        .act1 = end_crlf,  },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
@@ -188,9 +188,6 @@ mime_boundary_border_end_event(enum mime_boundary_border_end_event_type type) {
             break;
         case BOUNDARY_BORDER_END_WAIT:
             ret = "wait(c)";
-            break;
-        default:
-            ret = "escribir";
             break;
     }
     return ret;

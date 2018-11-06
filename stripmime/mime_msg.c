@@ -263,9 +263,6 @@ mime_msg_event(enum mime_msg_event_type type) {
         case MSG_UNEXPECTED:
             ret = "unexpected(c)";
             break;
-        default:
-            ret = "escribir";
-            break;
     }
     return ret;
 }

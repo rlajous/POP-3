@@ -55,7 +55,6 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 
 static const struct parser_state_transition ST_KEY_VALUE[] =  {
     {.when = '\"',       .dest = VALUE,           .act1 = fin,       },
-    {.when = TOKEN_CTL,  .dest = ERROR,           .act1 = unexpected,},
     {.when = ANY,        .dest = VALUE,           .act1 = value,     },
 };
 
@@ -103,9 +102,6 @@ mime_boundary_key_event(enum mime_boundary_key_event_type type) {
             break;
         case BOUNDARY_KEY_UNEXPECTED:
             ret = "unexpected(c)";
-            break;
-        default:
-            ret = "escribir";
             break;
     }
     return ret;
