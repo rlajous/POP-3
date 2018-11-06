@@ -17,3 +17,5 @@ client/src/cmake_install.cmake
 cmake-build-debug/
 
 \.vscode/
+
+stripmime/Fedora-Server-netinst-x86_64-26-1\.5\.iso

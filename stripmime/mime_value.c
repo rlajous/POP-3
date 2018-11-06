@@ -63,6 +63,7 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 
 static const struct parser_state_transition ST_VALUE0[] =  {
         {.when = ';',        .dest = ERROR,         .act1 = unexpected,},
+        {.when = '\r',       .dest = ERROR,         .act1 = unexpected,},
         {.when = TOKEN_LWSP, .dest = MIME_VALUE0,   .act1 = wait,      },
         {.when = TOKEN_CHAR, .dest = MIME_VALUE,    .act1 = value,     },
         {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},

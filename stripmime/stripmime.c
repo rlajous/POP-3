@@ -107,6 +107,9 @@ struct ctx {
     /* ¿es un multipart el mime actual?
      */
     bool *multipart_curr_mime;
+    /* ¿es un message/rfc822 el mime actual?
+     */
+    bool *message_curr_mime;
     /* content-type actual */
     char *content_type;
     /* stack de boundaries */
@@ -151,12 +154,24 @@ bool to_filter(struct ctx *ctx) {
 
 bool is_multipart(char *content_type) {
     char multi[] = "multipart/";
-    if(strlen(content_type) < strlen(multi)) {
-        return false;
-    }
     for(int i=0; i<strlen(multi); i++) {
         if(multi[i] != tolower(content_type[i])) {
             return false;
+        }
+    }
+
+    return true;
+}
+
+bool is_message(char *content_type) {
+    char message[] = "message/rfc822";
+    if(strlen(content_type) != strlen(message)) {
+        return false;
+    } else {
+        for(int j=0; j<strlen(message); j++) {
+            if(message[j] != tolower(content_type[j])) {
+                return false;
+            }
         }
     }
     return true;
@@ -218,11 +233,11 @@ content_type_value(struct ctx *ctx, const uint8_t c) {
         switch(e->type) {
             case VALUE:
                 nappend(ctx->content_type, c, MAX_STRING_LENGTH);
-                ctx->msg_content_type_value_stored = &T;
+                ctx->msg_content_type_value_stored = NULL;
                 break;
             case VALUE_END:
                 fprintf(stderr, "ctype: %s\n",ctx->content_type);
-                ctx->msg_content_type_value_stored = &F;
+                ctx->msg_content_type_value_stored = &T;
                 if(to_filter(ctx)) {
                     printf(": text/plain");
                     ctx->filter_curr_mime = &T;
@@ -231,6 +246,7 @@ content_type_value(struct ctx *ctx, const uint8_t c) {
                     ctx->filter_curr_mime = &F;
                 }
                 ctx->multipart_curr_mime = is_multipart(ctx->content_type)? &T : &F;
+                ctx->message_curr_mime = is_message(ctx->content_type)? &T : &F;
                 ctx->print_curr_char = &T;
                 break;
             case WAIT:
@@ -324,13 +340,19 @@ boundary_border_end(struct ctx *ctx, const uint8_t c) {
            case BOUNDARY_BORDER_END_VALUE:
                 break;
             case BOUNDARY_BORDER_END_VALUE_END_HYPHENS:
-                printf("--%s--",ctx->boundaries[ctx->boundaries_n-1]);
                 ctx->boundaries_n--;
                 ctx->boundaries[ctx->boundaries_n] = 0;
                 ctx->msg_boundary_border_detected  = NULL;
                 ctx->print_curr_char               = &T;
                 parser_reset(ctx->boundary_border_end);
-                parser_reset(ctx->msg);
+                parser_reset(ctx->boundary_border);
+                if(ctx->boundaries_n > 0) {
+                    char *border = calloc(2 + MAX_STRING_LENGTH, sizeof(char));
+                    strcat(border, "--");
+                    strcat(border, ctx->boundaries[ctx->boundaries_n-1]);
+                    boundary_parser_definition = parser_utils_strcmpi(border);
+                    boundary_parser_init(ctx->boundary_border, &boundary_parser_definition);
+                }
                 break;
             case BOUNDARY_BORDER_END_VALUE_END_CRLF:
                 ctx->msg_boundary_border_detected = NULL;
@@ -338,7 +360,6 @@ boundary_border_end(struct ctx *ctx, const uint8_t c) {
                     ctx->print_curr_char = &T;
                 }
                 if(!*ctx->multipart_curr_mime || !*ctx->filter_curr_mime) {
-                    printf("--%s",ctx->boundaries[ctx->boundaries_n-1]);
                     parser_reset(ctx->msg);
                 }
                 parser_reset(ctx->boundary_border_end);
@@ -441,13 +462,12 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
             case MSG_VALUE:
                 if( ctx->msg_content_type_field_detected != NULL
                 && *ctx->msg_content_type_field_detected) {
-                    if( ctx->msg_content_type_value_stored == NULL
-                    || *ctx->msg_content_type_value_stored) {
+                    if( ctx->msg_content_type_value_stored == NULL) {
                         for(int i = 0; i < e->n; i++) {
                             content_type_value(ctx, e->data[i]);
                         }
                     } else if(*ctx->multipart_curr_mime){
-                        if( ctx->msg_boundary_name_detected == NULL) {
+                        if(ctx->msg_boundary_name_detected == NULL) {
                             for(int i = 0; i < e->n; i++) {
                                boundary_name(ctx, e->data[i]);
                             }    
@@ -457,8 +477,6 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
                                 boundary_key(ctx, e->data[i]);
                             }
                         }
-                    } else {
-                        // si no es ctype value ni boundary key no hay nada que hacer
                     }
                 }
                 break;
@@ -469,7 +487,20 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
                 && *ctx->msg_content_transfer_field_detected) {
                     // si detecte el header de content-transfer-encoding es porque el valor
                     // se debia reemplazar (para que el mensaje de reemplazo sea visible)
-                    printf(": quoted-printable\r\n");
+                    printf(": 7bit\r\n");
+                } else if(ctx->msg_content_type_value_stored == NULL) { // caso en que el value de content-type no terminaba en ';' 
+                    if(strlen(ctx->content_type) > 0) {
+                        fprintf(stderr, "ctype: %s\n",ctx->content_type);
+                        if(to_filter(ctx)) {
+                            printf(": text/plain\r\n");
+                            ctx->filter_curr_mime = &T;
+                        } else {
+                            printf(": %s\r\n", ctx->content_type);
+                            ctx->filter_curr_mime = &F;
+                        }
+                        ctx->multipart_curr_mime = is_multipart(ctx->content_type)? &T : &F;
+                        ctx->message_curr_mime   = is_message(ctx->content_type)? &T : &F;
+                    }
                 }
                 ctx->msg_content_type_field_detected     = NULL;
                 ctx->msg_content_transfer_field_detected = NULL;
@@ -490,8 +521,14 @@ mime_msg(struct ctx *ctx, const uint8_t c) {
                         printf("--%s\r\n", ctx->boundaries[ctx->boundaries_n-1]);
                     }
                     printf("%s\r\n", ctx->filter_msg);
+                    if(!*ctx->multipart_curr_mime) {
+                        printf("--%s", ctx->boundaries[ctx->boundaries_n-1]);                    
+                    }
                     ctx->print_curr_char = &F;
                 } else {
+                    if(*ctx->message_curr_mime) {
+                        parser_reset(ctx->msg);
+                    }
                     ctx->print_curr_char = &T;
                 }
                 if(ctx->boundaries_n > 0) {
@@ -580,7 +617,7 @@ main(const int argc, const char **argv) {
         .boundary_name          = parser_init(init_char_class(), &boundary_name_def),
         .body                   = parser_init(init_char_class(), mime_body_parser()),
         .boundary_key           = parser_init(init_char_class(), mime_boundary_key_parser()),
-        .boundary_border        = parser_init(init_char_class(), &boundary_border_def), // la def se cambia dinamicamente por cada key TODO: sacar boundary_border_def
+        .boundary_border        = parser_init(init_char_class(), &boundary_border_def),
         .boundary_border_end    = parser_init(init_char_class(), mime_boundary_border_end_parser()),
 
         // Extra data
@@ -588,39 +625,32 @@ main(const int argc, const char **argv) {
         .boundaries             = calloc(MAX_BOUNDARIES, sizeof(char *)),
         .boundaries_n           = 0,
         .msg_boundary_border_detected           = NULL,
-        .filter_msg             = "filter_msg", //TODO: sacar las comillas
+        .filter_msg             = filter_msg,
         .blacklist              = calloc(MAX_STRING_LENGTH, sizeof(char *)),
         .blacklist_n            = 0,
         .print_curr_char        = &T,
         .filter_curr_mime       = &F,
         .multipart_curr_mime    = &F,
+        .message_curr_mime      = &F,
     };
 
     for(int i=0; i<MAX_BOUNDARIES; i++) {
         ctx.boundaries[i] = calloc(MAX_STRING_LENGTH, sizeof(char));
         
-    }
-    
+    }    
+
     int j = 0;
     for(int i=0; i<MAX_BLACKLIST; i++) {
         ctx.blacklist[i] = calloc(MAX_STRING_LENGTH, sizeof(char));
-        //TODO: descomentar esto
-        // do {
-        //     for(; blacklist_raw[j] != ',' && j < strlen(blacklist_raw); j++) {
-        //         strcat(ctx.blacklist[i], blacklist_raw[j]);
-        //     }
-        //     j++;
-        // } while(strlen(ctx.blacklist) > 0);
-        // if(ctx.blacklist_n == 0 && j >= strlen(blacklist_raw)) {
-        //     ctx.blacklist_n = i;
-        // }
+        for(; j < strlen(blacklist_raw) && blacklist_raw[j] != ','; j++) {
+            nappend(ctx.blacklist[i], blacklist_raw[j], 1024);
+        }
+        j++;
+        if(ctx.blacklist_n == 0 && j >= strlen(blacklist_raw)) {
+            ctx.blacklist_n = i + 1;
+            break;
+        }
     }
-
-    //TODO: sacar estos ejemplos
-    strcat(ctx.blacklist[0], "img/*");
-    strcat(ctx.blacklist[1], "text/plain");
-    ctx.blacklist_n = 2;
-    //sacar hasta aca
 
     uint8_t data[4096];
     int n;
@@ -630,7 +660,7 @@ main(const int argc, const char **argv) {
             pop3_multi(&ctx, data[j]);
         }
     } while(n > 0);
-
+    
     parser_destroy(ctx.multi);
     parser_destroy(ctx.msg);
     parser_destroy(ctx.ctype_header);
