@@ -1,7 +1,7 @@
 #ifndef PARSER_UTILS_H_c2f29bb6482d34fc6f94a09046bbd65a5f668acf
 #define PARSER_UTILS_H_c2f29bb6482d34fc6f94a09046bbd65a5f668acf
 
-/*
+/**
  * parser_utils.c -- factory de ciertos parsers típicos
  *
  * Provee parsers reusables, como por ejemplo para verificar que
@@ -21,7 +21,7 @@ const char *
 parser_utils_strcmpi_event(const enum string_cmp_event_types type);
 
 
-/*
+/**
  * Crea un parser que verifica que los caracteres recibidos forment el texto
  * descripto por `s'.
  *

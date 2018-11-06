@@ -29,13 +29,15 @@
     <area>Protocolos de Comunicación</area>
     <workgroup>Grupo 7</workgroup>
     <abstract>
-      <t>This memo blah blah blah....
+      <t>Este documento informa sobre el trabajo realizado para el trabajo practico especial de la
+        materia Protocolos de Comunicación por parte del grupo 7 del segundo cuatrimestre de 2018.
+        Se encontrara una descripcion completa del trabajo realizado junto con el analisis del mismo
       </t>
     </abstract>
   </front>
   <middle>
     <section title="Aplicaciones y protocolos desarrollados">
-      <section title="El protocolo SPCP">
+      <section title="Protocolo SPCP">
         <section title="introducción al protocolo">
           <t>El Simple Proxy Communication Protocol(SPCP) es un protocolo binario utilizado para poder
             configurar y obtener métricas de un servidor proxy. En el diseño del protocolo se priorizo
@@ -260,12 +262,98 @@
           </section>
         </section>
       </section>
+      <section title="Servidor SPCP">
+        <section title="Introducción al servidor SPCP">
+          <t>El proxy cuenta con un servidor SPCP implementado dentro del mismo proxy. Este servidor
+            Implementa el lado servidor del protocolo SPCP para poder brindar monitoreo y metricas a los
+            usuarios administradores del proxy
+          </t>
+        </section>
+        <section title="Implementacion del servidor">
+          <t>El servidor SPCP se implementa de manera no bloqueante y concurrente para poder permitir la
+            ágil utilización del mismo por parte de multiples administradores. Para esto se utiliza una
+            estructura de servidor similar a la que se presenta en el <eref target="1">servidor
+            SocksV5</eref>. Se utiliza la estrategia de un selector el cual atiende a los file descriptors
+            de los sockets mediante la funcion pselect.
+          </t>
+          <t>El servidor cuenta con un socket pasivo SCTP el cual escucha por defecto en el puerto 9090 pero
+             puede ser alterado mediante los argumentos pasados al proxy en el momento de la inicialización.
+             Este socket pasivo establece las conexiones entre el servidor SPCP y el cliente. Una vez
+             establecida la conexión se procede al manejo de los requests y las responses.
+          </t>
+          <t>Se le da especial consideración al manejo de la autenticación dentro del servidor SPCP, ya que
+            si bien el protocolo establece el mecanismo de autenticación, es el servidor quien decide como
+            implementarlo. Para esto el servidor mantiene los nombres y contraseñas de los usuarios que tienen
+            autoridad de administrar y en base a estos datos autentica al usuario y procede a atender los
+            requests del mismo.
+          </t>
+        </section>
+      </section>
+      <section title="Cliente SPCP">
+        <t>El trabajo practico cuenta con un cliente para poder demostrar las funcionalidades del servidor
+           SPCP, este es relativamente simple pero permite al usuario utilizar toda la potencia del protocolo.
+           El cliente permite especificar la IP y el puerto del servidor SPCP al cual desea conectarse.
+        </t>
+        <t>Al inciar el cliente este intenta conectarse con el servidor. De ser exitoso entonces procede a
+           pedirle al usuario que se autentique mediante un usuario y contraseña validos. una vez autenticado
+           se le presentan todas las opciones que puede elegir para interactuar con el servidor spcp. Puede
+           realizar cuantas operaciones desee y terminar su sesión mediante el comando quit.</t>
+      </section>
+      <section title="Proxy POP3">
+        <section title="introducción">
+          <t>Al centro del trabajo practico se encuentra el proxy pop3. Se encarga de interactuar con el
+             servidor origen y el cliente. El proxy le permite al cleinte poder acceder a su casilla de
+             correo POP3 del servidor origen y beneficiarse del proxy. El cliente cuenta con soporte de
+             pipelining independientemente de la implementación del servidor origen y ademas todos sus
+             mensajes pasan por el proceso de transformación del proxy si este se encuentra activado.</t>
+        </section>
+        <section title="Resolución de nombres">
+          <t>El proxy cuenta con la capacidad de hacer resolucion de nombres sin blockearse, asi un usuario
+             del proxy no necesita conocer la ip de su servidor de origen sino que con su domain name basta.
+          </t>
+          <t>La resolución de nombres por su naturaleza es bloqueante, ya que debe realizar una consulta de
+             DNS, es por esto que TODO
+          </t>
+        </section>
+        <section title="Determinación de pipelining">
+          <t>Como el proxy implementa pipelining independientemente de si el servidor origen lo implementa
+             o no este debe poder detectar el
+          </t>
+        </section>
+        <section title="Implementacion de piplining con servidor no pipeliner">
+
+        </section>
+        <section title="Manejo del request response">
+
+        </section>
+        <section title="Manejo de las transformaciones">
+
+        </section>
+      </section>
+      <section title="censurador de mime types">
+
+      </section>
     </section>
     <section title="Problemas encontrados">
+      <section title="Determinación de pipelining">
+
+      </section>
       <section title="Piplinging con servidor de origen no pipeliner">
 
       </section>
       <section title="Detección y transformación de mensajes">
+
+      </section>
+      <section title="Append capa">
+
+      </section>
+      <section title="casarnos al read">
+
+      </section>
+      <section title="escapado y desescapado al transform">
+
+      </section>
+      <section title="Resolución de nombres no bloqueante">
 
       </section>
     </section>
@@ -280,6 +368,15 @@
           ilegible.
         </t>
       </section>
+      <section title="Credenciales de los usuarios en el codigo">
+        <t>En esta versión del proxy este implementa los nombres de usuarios directamente sobre el codigo
+           Esto resulta inflexible al momento de agregar, modificar o quitar usuarios administradores ya
+           que para esto se necesita bajar el servidor, cambiar el codigo fuente, recompilarlo y volverlo
+          a subir</t>
+      </section>
+      <section title="Pipelining inutilizado">
+        <t>Segun el RFC TODO(agregar ref) </t>
+      </section>
     </section>
     <section title="Posibles extensiones">
       <section title="Agregado de timeouts">
@@ -287,6 +384,14 @@
            de tiempo, así se podría mejorar la performance del proxy ya que se irian purgando las conexiones
            inactivas
         </t>
+        <section title="Repositorio de usuarios SPCP">
+          <t>Para poder remover las credenciales de los usuarios administradores del codigo debemos poder
+             guardarlas de alguna otra manera. Una posible implementación mas elegante es bajar los usuarios
+             a un archivo de donde se levanten en tiempo de ejecución, esto permite que la modificación de los
+             usuarios administradores sea tan simple como modificar un archivo y no se tenga que recompilar el
+             binario
+          </t>
+        </section>
       </section>
     </section>
     <section title="conclusiones">
@@ -307,7 +412,7 @@
   </middle>
   <back>
     <references>
-      <reference anchor="TODO">
+      <reference target="1">
         <front>
           <title>Server Socks V5</title>
           <author fullname="Juan F. Codagnone" initials="J.F.C">
