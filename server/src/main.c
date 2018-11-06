@@ -59,73 +59,8 @@ main(const int argc, char * const *argv){
     selector_status ss = SELECTOR_SUCCESS;
     fd_selector selector = NULL;
 
-    struct addrinfo *pop3_addr;
-    if(resolve_address(proxyArguments->pop3_address,
-                       proxyArguments->pop3_port, &pop3_addr) == false) {
-      err_msg = "unable to resolve address";
-      goto finally;
-    }
-
-    const int pop3_server = socket(pop3_addr->ai_family, SOCK_STREAM, IPPROTO_TCP);
-    if(pop3_server < 0){
-        err_msg = "unable to create pop3 proxy socket";
-        goto finally;
-    }
-    fprintf(stdout, "Pop3 proxy listening on TCP port %d\n", proxyArguments->pop3_port);
-
-    setsockopt(pop3_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
-
-    if(bind(pop3_server, pop3_addr->ai_addr, pop3_addr->ai_addrlen) < 0){
-        err_msg = "Unable to bind pop3 socket";
-        goto finally;
-    }
-
-    if(listen(pop3_server, 20) < 0){
-        err_msg = "Unable to listen at pop3 socket";
-        goto finally;
-    }
-
-    freeaddrinfo(pop3_addr);
-
-
-    /// SPCP
-
-    struct addrinfo *spcp_addr;
-    if(resolve_address(proxyArguments->spcp_address,
-                       proxyArguments->spcp_port, &spcp_addr) == false) {
-        err_msg = "unable to resolve spcp_server address";
-        goto finally;
-    }
-
-    const int spcp_server = socket(spcp_addr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
-    if(spcp_server < 0){
-        err_msg = "unable to create spcp_server socket";
-        goto finally;
-    }
-    fprintf(stdout, "spcp server listening on SCTP port %d\n", proxyArguments->spcp_port);
-
-    setsockopt(spcp_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
-
-    if(bind(spcp_server, spcp_addr->ai_addr, spcp_addr->ai_addrlen) < 0){
-        err_msg = "Unable to bind scpcp socket";
-        goto finally;
-    }
-
-    if(listen(spcp_server, 20) < 0){
-        err_msg = "Unable to listen at spcp socket";
-        goto finally;
-    }
-
-    freeaddrinfo(spcp_addr);
-    ///
-
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT, sigterm_handler);
-
-    if(selector_fd_set_nio(pop3_server) == -1){
-        err_msg = "getting server socket flags";
-        goto finally;
-    }
 
     const struct selector_init conf = {
             .signal  = SIGALRM,
@@ -143,15 +78,69 @@ main(const int argc, char * const *argv){
         err_msg = "unable to create selector";
         goto finally;
     }
+
+    struct addrinfo *pop3_addr;
+    if(resolve_address(proxyArguments->pop3_address,
+                       proxyArguments->pop3_port, &pop3_addr) == false) {
+      err_msg = "unable to resolve address";
+      goto finally;
+    }
+
+    struct addrinfo *pop3_curr = pop3_addr;
+
     const struct fd_handler proxyPop3 = {
             .handle_read    = proxyPop3_passive_accept,
             .handle_write   = NULL,
             .handle_close   = NULL,
     };
-    ss = selector_register(selector, pop3_server, &proxyPop3, OP_READ, NULL);
 
-    if(ss != SELECTOR_SUCCESS){
-        err_msg = "registering pop3 fd";
+    int pop3_server;
+
+    do {
+        pop3_server = socket(pop3_curr->ai_family, SOCK_STREAM, IPPROTO_TCP);
+        if(pop3_server < 0){
+            err_msg = "unable to create pop3 proxy socket";
+            goto finally;
+        }
+
+        setsockopt(pop3_server, SOL_SOCKET,SO_REUSEADDR, &(int){1}, sizeof(int));
+
+        if(bind(pop3_server, pop3_curr->ai_addr, pop3_curr->ai_addrlen) < 0){
+            err_msg = "Unable to bind pop3 socket";
+            goto finally;
+        }
+
+        if(listen(pop3_server, 20) < 0){
+            err_msg = "Unable to listen at pop3 socket";
+            goto finally;
+        }
+
+        if(selector_fd_set_nio(pop3_server) == -1){
+            err_msg = "getting server socket flags";
+            goto finally;
+        }
+
+        ss = selector_register(selector, pop3_server, &proxyPop3, OP_READ, NULL);
+
+        if(ss != SELECTOR_SUCCESS){
+            err_msg = "registering pop3 fd";
+            goto finally;
+        }
+
+        pop3_curr = pop3_curr->ai_next;
+    } while(pop3_curr != NULL);
+
+    fprintf(stdout, "Pop3 proxy listening on TCP port %d\n", proxyArguments->pop3_port);
+    freeaddrinfo(pop3_addr);
+
+
+    /// SPCP
+
+
+    struct addrinfo *spcp_addr;
+    if(resolve_address(proxyArguments->spcp_address,
+                       proxyArguments->spcp_port, &spcp_addr) == false) {
+        err_msg = "unable to resolve spcp_server address";
         goto finally;
     }
 
@@ -161,12 +150,39 @@ main(const int argc, char * const *argv){
             .handle_close   = NULL,
     };
 
-    ss = selector_register(selector, spcp_server, &spcpServer, OP_READ, NULL);
+    struct addrinfo *spcp_curr = spcp_addr;
+    int spcp_server;
+    do {
+        spcp_server = socket(spcp_curr->ai_family, SOCK_STREAM, IPPROTO_SCTP);
+        if (spcp_server < 0) {
+            err_msg = "unable to create spcp_server socket";
+            goto finally;
+        }
 
-    if(ss != SELECTOR_SUCCESS){
-        err_msg = "registering spcp fd";
-        goto finally;
-    }
+        setsockopt(spcp_server, SOL_SOCKET, SO_REUSEADDR, &(int) {1}, sizeof(int));
+
+        if (bind(spcp_server, spcp_curr->ai_addr, spcp_curr->ai_addrlen) < 0) {
+            err_msg = "Unable to bind scpcp socket";
+            goto finally;
+        }
+
+        if (listen(spcp_server, 20) < 0) {
+            err_msg = "Unable to listen at spcp socket";
+            goto finally;
+        }
+
+
+        ss = selector_register(selector, spcp_server, &spcpServer, OP_READ, NULL);
+
+        if (ss != SELECTOR_SUCCESS) {
+            err_msg = "registering spcp fd";
+            goto finally;
+        }
+        spcp_curr = spcp_curr->ai_next;
+    } while(spcp_curr != NULL);
+
+    fprintf(stdout, "spcp server listening on SCTP port %d\n", proxyArguments->spcp_port);
+    freeaddrinfo(spcp_addr);
 
     for(;!done;){
         err_msg = NULL;

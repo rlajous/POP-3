@@ -82,27 +82,26 @@ request_parse_cmd(struct request_parser* p, const uint8_t c) {
 }
  
 enum request_state
-request_parse_arg(struct request_parser *p, const uint8_t c){
+request_parse_arg(struct request_parser *p, const uint8_t c) {
     /** recieve a CF */
     if(c == '\r'){
         p->request.nargs++;
         p->request.arg[p->request.nargs-1][p->i] = '\0';
-        if(has_minimum_nargs(p)){
-            return request_CR;
-        }
+        return request_CR;
+
     }
 
     if(has_maximum_nargs(p)){
         return request_arg;
     }
     if(c == ' '){
-        p->request.nargs++;
         p->request.arg[p->request.nargs-1][p->i] = '\0';
         remaining_set(p, MAX_ARG_LENGTH);
-        arg_dependant_multi(p);
+        p->request.nargs++;
         return request_arg;
     }
     if(!remaining_is_done(p)){
+        arg_dependant_multi(p);
         char current_char = (char)c;
         p->request.arg[p->request.nargs][p->i++] = current_char;
         p->request.argsize[p->request.nargs]++;
@@ -117,7 +116,7 @@ request_parse_LF(struct request_parser* p, const uint8_t c){
     if(c == '\n'){
         return request_done;
     }
-    return request_error;
+    return request_cmd;
 }
 
 extern enum request_state
@@ -152,7 +151,7 @@ request_parser_init(struct request_parser * p) {
     p->state = request_cmd;
     remaining_set(p, MAX_CMD_LENGTH);
     memset(&p->request, 0, sizeof(p->request));
-    memset(p->cmd_buffer, 0, sizeof(*(p->cmd_buffer)));
+    memset(p->cmd_buffer, 0, N(p->cmd_buffer));
     p->request.cmd    = unknown;
     p->request.multi  = false;
     p->request.nargs  = 0;
@@ -191,5 +190,3 @@ extern void
 request_close(struct request_parser *p) {
     //Creo que no hay nada que hacer.
 }
-
-//TODO(fran): habría que implementar el marshall?
