@@ -130,8 +130,8 @@ parser_utils_strcmpi(const char *s) {
     struct parser_definition def = {
         .start_state   = 0,
         .states_count  = n + 2,
-        .states        = (const struct parser_state_transition **) states,
-        .states_n      = (const size_t *) nstates,
+        .states        = (struct parser_state_transition **) states,
+        .states_n      = (size_t *) nstates,
     };
 
     return def;
@@ -212,8 +212,8 @@ parser_utils_strcmpi_ignore_lwsp(const char *s) {
     struct parser_definition def = {
         .start_state   = 0,
         .states_count  = n + 3,
-        .states        = (const struct parser_state_transition **) states,
-        .states_n      = (const size_t *) nstates,
+        .states        = (struct parser_state_transition **) states,
+        .states_n      = (size_t *) nstates,
     };
 
     return def;

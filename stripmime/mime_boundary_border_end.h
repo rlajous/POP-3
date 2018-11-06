@@ -31,7 +31,7 @@ enum mime_boundary_border_end_event_type {
 };
 
 /** la definición del parser */
-const struct parser_definition * mime_boundary_border_end_parser(void);
+struct parser_definition * mime_boundary_border_end_parser(void);
 
 const char *
 mime_boundary_border_end_event(enum mime_boundary_border_end_event_type type);

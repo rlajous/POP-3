@@ -22,7 +22,7 @@ enum mime_ctransfer_value_event_type {
 };
 
 /** la definición del parser */
-const struct parser_definition * mime_ctransfer_value_parser(void);
+struct parser_definition * mime_ctransfer_value_parser(void);
 
 const char *
 mime_ctransfer_value_event(enum mime_ctransfer_value_event_type type);

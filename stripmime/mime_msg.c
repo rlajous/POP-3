@@ -122,7 +122,7 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_NAME0[] =  {
+static struct parser_state_transition ST_NAME0[] =  {
     {.when = ':',        .dest = ERROR,         .act1 = unexpected,},
     {.when = TOKEN_LWSP, .dest = ERROR,         .act1 = unexpected,},
     {.when = '\r',       .dest = NAME_CR,       .act1 = wait,      },
@@ -131,7 +131,7 @@ static const struct parser_state_transition ST_NAME0[] =  {
     {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_NAME[] =  {
+static struct parser_state_transition ST_NAME[] =  {
     {.when = ':',        .dest = VALUE,         .act1 = name_end,  },
     {.when = TOKEN_LWSP, .dest = ERROR,         .act1 = unexpected,},
     {.when = TOKEN_CTL,  .dest = ERROR,         .act1 = unexpected,},
@@ -139,18 +139,18 @@ static const struct parser_state_transition ST_NAME[] =  {
     {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_VALUE[] =  {
+static struct parser_state_transition ST_VALUE[] =  {
     {.when = '\r',       .dest = VALUE_CR,       .act1 = wait,      },
     {.when = ANY,        .dest = VALUE,          .act1 = value,     },
 };
 
-static const struct parser_state_transition ST_VALUE_CR[] =  {
+static struct parser_state_transition ST_VALUE_CR[] =  {
     {.when = '\n',       .dest = VALUE_CRLF,     .act1 = wait,      },
     {.when = ANY,        .dest = VALUE,          .act1 = value_cr,
                                                  .act2 = value,     },
 };
 
-static const struct parser_state_transition ST_VALUE_CRLF[] =  {
+static struct parser_state_transition ST_VALUE_CRLF[] =  {
     {.when = ':',        .dest = ERROR,          .act1 = unexpected,},
     {.when = '\r',       .dest = VALUE_CRLF_CR,  .act1 = wait,},
     {.when = TOKEN_LWSP, .dest = FOLD,           .act1 = value_fold_crlf,
@@ -162,27 +162,27 @@ static const struct parser_state_transition ST_VALUE_CRLF[] =  {
     {.when = ANY,        .dest = ERROR,          .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_FOLD[] =  {
+static struct parser_state_transition ST_FOLD[] =  {
     {.when =TOKEN_LWSP,  .dest = FOLD,           .act1 = value_fold,},
     {.when = ANY,        .dest = VALUE,          .act1 = value,     },
 };
 
-static const struct parser_state_transition ST_VALUE_CRLF_CR[] =  {
+static struct parser_state_transition ST_VALUE_CRLF_CR[] =  {
     {.when = '\n',        .dest = BODY,          .act1 = value_end,
                                                  .act2 = body_start,},
     {.when = ANY,         .dest = ERROR,         .act1 = value_end,
                                                  .act2 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BODY[] =  {
+static struct parser_state_transition ST_BODY[] =  {
     {.when = ANY,        .dest = BODY,           .act1 = body,},
 };
 
-static const struct parser_state_transition ST_ERROR[] =  {
+static struct parser_state_transition ST_ERROR[] =  {
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_NAME_CR[] =  {
+static struct parser_state_transition ST_NAME_CR[] =  {
     {.when = '\n',       .dest = NAME0,           .act1 = name_cr,
                                                   .act2 = name,      },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
@@ -191,7 +191,7 @@ static const struct parser_state_transition ST_NAME_CR[] =  {
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {
+static struct parser_state_transition *states [] = {
     ST_NAME0,
     ST_NAME,
     ST_VALUE,
@@ -206,7 +206,7 @@ static const struct parser_state_transition *states [] = {
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {
+static size_t states_n [] = {
     N(ST_NAME0),
     N(ST_NAME),
     N(ST_VALUE),
@@ -226,7 +226,7 @@ static struct parser_definition definition = {
     .start_state  = NAME0,
 };
 
-const struct parser_definition * 
+struct parser_definition * 
 mime_message_parser(void) {
     return &definition;
 }

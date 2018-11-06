@@ -45,20 +45,20 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_VALUE[] =  {
+static struct parser_state_transition ST_VALUE[] =  {
         {.when = ANY,        .dest = VALUE,         .act1 = value,},
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {
+static struct parser_state_transition *states [] = {
         ST_VALUE,
 };
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {        
+static size_t states_n [] = {        
         N(ST_VALUE),
 };
 
@@ -69,7 +69,7 @@ static struct parser_definition definition = {
         .start_state  = VALUE,
 };
 
-const struct parser_definition *
+struct parser_definition *
 mime_ctransfer_value_parser(void) {
     return &definition;
 }

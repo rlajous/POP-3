@@ -39,7 +39,7 @@ boundary_parser_init(struct parser *parser, struct parser_definition *def) {
 
 struct parser *
 parser_init(const unsigned *classes,
-            const struct parser_definition *def) {
+            struct parser_definition *def) {
     struct parser *ret = malloc(sizeof(*ret));
     if(ret != NULL) {
         memset(ret, 0, sizeof(*ret));

@@ -94,38 +94,38 @@ unexpected_crlf(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_BORDER_END_VALUE[] =  {
+static struct parser_state_transition ST_BORDER_END_VALUE[] =  {
     {.when = '-',        .dest = VALUE_HYPHEN,    .act1 = wait,      },
     {.when = '\r',       .dest = VALUE_CR,        .act1 = wait,      },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN[] =  {
+static struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN[] =  {
     {.when = '-',        .dest = VALUE_HYPHEN_HYPHEN, .act1 = wait,},
     {.when = ANY,        .dest = ERROR,               .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN_HYPHEN[] =  {
+static struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN_HYPHEN[] =  {
     {.when = '\r',       .dest = VALUE_HYPHEN_HYPHEN_CR, .act1 = wait,},
     {.when = ANY,        .dest = ERROR,                  .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN_HYPHEN_CR[] =  {
+static struct parser_state_transition ST_BORDER_END_VALUE_HYPHEN_HYPHEN_CR[] =  {
     {.when = '\n',       .dest = VALUE_HYPHEN_HYPHEN_CR, .act1 = end_hyphen,},
     {.when = ANY,        .dest = ERROR,                  .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BORDER_END_VALUE_CR[] =  {
+static struct parser_state_transition ST_BORDER_END_VALUE_CR[] =  {
     {.when = '\n',       .dest = VALUE_CR,        .act1 = end_crlf,  },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_ERROR[] =  {
+static struct parser_state_transition ST_ERROR[] =  {
     {.when = '\r',       .dest = ERROR_CR,        .act1 = wait,      },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_ERROR_CR[] =  {
+static struct parser_state_transition ST_ERROR_CR[] =  {
     {.when = '\n',       .dest = ERROR_CR,        .act1 = unexpected_cr,
                                                   .act2 = unexpected_crlf, },
     {.when = ANY,        .dest = ERROR,           .act1 = unexpected,      },
@@ -134,7 +134,7 @@ static const struct parser_state_transition ST_ERROR_CR[] =  {
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {    
+static struct parser_state_transition *states [] = {    
     ST_BORDER_END_VALUE,
     ST_BORDER_END_VALUE_HYPHEN,
     ST_BORDER_END_VALUE_HYPHEN_HYPHEN,
@@ -146,7 +146,7 @@ static const struct parser_state_transition *states [] = {
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {
+static size_t states_n [] = {
     N(ST_BORDER_END_VALUE),
     N(ST_BORDER_END_VALUE_HYPHEN),
     N(ST_BORDER_END_VALUE_CR),
@@ -161,7 +161,7 @@ static struct parser_definition definition = {
     .start_state  = VALUE,
 };
 
-const struct parser_definition * 
+struct parser_definition * 
 mime_boundary_border_end_parser(void) {
     return &definition;
 }

@@ -22,7 +22,7 @@ enum mime_boundary_key_event_type {
 };
 
 /** la definición del parser */
-const struct parser_definition * mime_boundary_key_parser(void);
+struct parser_definition * mime_boundary_key_parser(void);
 
 const char *
 mime_boundary_key_event(enum mime_boundary_key_event_type type);

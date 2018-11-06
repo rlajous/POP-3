@@ -71,27 +71,27 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_BODY[] =  {
+static struct parser_state_transition ST_BODY[] =  {
     {.when = '\r',                 .dest = BODY_CR,       .act1 = wait,      },
     {.when = TOKEN_CHAR,           .dest = BODY,          .act1 = value,     },
     {.when = TOKEN_EXTENDED_CHAR,  .dest = BODY,          .act1 = value,     },
     {.when = ANY,                  .dest = ERROR,         .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_BODY_CR[] =  {
+static struct parser_state_transition ST_BODY_CR[] =  {
     {.when = '\n',       .dest = BODY,         .act1 = value_cr,
                                                .act2 = value,     },
     {.when = ANY,        .dest = ERROR,        .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_ERROR[] =  {
+static struct parser_state_transition ST_ERROR[] =  {
     {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {
+static struct parser_state_transition *states [] = {
         ST_BODY,
         ST_BODY_CR,
         ST_ERROR,
@@ -99,7 +99,7 @@ static const struct parser_state_transition *states [] = {
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {        
+static size_t states_n [] = {        
         N(ST_BODY),
         N(ST_BODY_CR),
         N(ST_ERROR),
@@ -112,7 +112,7 @@ static struct parser_definition definition = {
         .start_state  = BODY,
 };
 
-const struct parser_definition *
+struct parser_definition *
 mime_body_parser(void) {
     return &definition;
 }

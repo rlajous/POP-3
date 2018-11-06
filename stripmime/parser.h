@@ -65,7 +65,7 @@ struct parser_definition {
  */
 struct parser *
 parser_init    (const unsigned *classes,
-                const struct parser_definition *def);
+                struct parser_definition *def);
 
 /** destruye el parser */
 void

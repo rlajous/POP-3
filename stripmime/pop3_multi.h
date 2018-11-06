@@ -19,7 +19,7 @@ enum pop3_multi_type {
 };
 
 /** la definición del parser */
-const struct parser_definition * pop3_multi_parser(void);
+struct parser_definition * pop3_multi_parser(void);
 
 const char *
 pop3_multi_event(enum pop3_multi_type type);

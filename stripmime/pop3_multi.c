@@ -50,39 +50,39 @@ fin(struct parser_event *ret, const uint8_t c) {
     ret->n       = 0;
 }
 
-static const struct parser_state_transition ST_NEWLINE[] =  {
+static struct parser_state_transition ST_NEWLINE[] =  {
     //{.when = '.',        .dest = DOT,         .act1 = byte,}, //descomentar esto si se quiere manejar dot-stuffing 
     {.when = ANY,        .dest = BYTE,        .act1 = byte,},
 };
 
-static const struct parser_state_transition ST_BYTE[] =  {
+static struct parser_state_transition ST_BYTE[] =  {
     {.when = '\r',       .dest = CR,          .act1 = wait,},
     {.when = ANY,        .dest = BYTE,        .act1 = byte,},
 };
 
-static const struct parser_state_transition ST_CR[] =  {
+static struct parser_state_transition ST_CR[] =  {
     {.when = '\n',       .dest = NEWLINE,     .act1 = byte_cr, .act2 = byte},
     {.when = ANY,        .dest = BYTE,        .act1 = byte_cr, .act2 = byte},
 };
 
-static const struct parser_state_transition ST_DOT[] =  {
+static struct parser_state_transition ST_DOT[] =  {
     {.when = '\r',       .dest = DOT_CR,      .act1 = wait},
     {.when = ANY,        .dest = BYTE,        .act1 = byte},
 };
 
-static const struct parser_state_transition ST_DOT_CR[] =  {
+static struct parser_state_transition ST_DOT_CR[] =  {
     {.when = '\n',       .dest = FIN,         .act1 = fin}, //imprimir \r\n
     {.when = ANY,        .dest = BYTE,        .act1 = byte_cr, .act2 = byte},
 };
 
-static const struct parser_state_transition ST_FIN[] =  {
+static struct parser_state_transition ST_FIN[] =  {
     {.when = ANY,        .dest = BYTE,        .act1 = byte_cr, .act2 = byte},
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {
+static struct parser_state_transition *states [] = {
     ST_NEWLINE,
     ST_BYTE,
     ST_CR,
@@ -93,7 +93,7 @@ static const struct parser_state_transition *states [] = {
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {
+static size_t states_n [] = {
     N(ST_NEWLINE),
     N(ST_BYTE),
     N(ST_CR),
@@ -109,7 +109,7 @@ static struct parser_definition definition = {
     .start_state  = NEWLINE,
 };
 
-const struct parser_definition *
+struct parser_definition *
 pop3_multi_parser(void) {
     return &definition;
 }

@@ -25,7 +25,7 @@ enum mime_value_event_type {
 };
 
 /** la definición del parser */
-const struct parser_definition * mime_value_parser(void);
+struct parser_definition * mime_value_parser(void);
 
 const char *
 mime_value_event(enum mime_value_event_type type);

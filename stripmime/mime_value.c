@@ -61,7 +61,7 @@ unexpected(struct parser_event *ret, const uint8_t c) {
 ///////////////////////////////////////////////////////////////////////////////
 // Transiciones
 
-static const struct parser_state_transition ST_VALUE0[] =  {
+static struct parser_state_transition ST_VALUE0[] =  {
         {.when = ';',        .dest = ERROR,         .act1 = unexpected,},
         {.when = '\r',       .dest = ERROR,         .act1 = unexpected,},
         {.when = TOKEN_LWSP, .dest = MIME_VALUE0,   .act1 = wait,      },
@@ -69,21 +69,21 @@ static const struct parser_state_transition ST_VALUE0[] =  {
         {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_VALUE[] =  {
+static struct parser_state_transition ST_VALUE[] =  {
         {.when = ';',        .dest = MIME_VALUE,    .act1 = fin,       },
         {.when = TOKEN_LWSP, .dest = MIME_VALUE,    .act1 = value,     },
         {.when = TOKEN_CHAR, .dest = MIME_VALUE,    .act1 = value,     },
         {.when = ANY,        .dest = ERROR,         .act1 = unexpected,},
 };
 
-static const struct parser_state_transition ST_ERROR[] =  {
+static struct parser_state_transition ST_ERROR[] =  {
         {.when = ANY,        .dest = ERROR,           .act1 = unexpected,},
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declaración formal
 
-static const struct parser_state_transition *states [] = {
+static struct parser_state_transition *states [] = {
         ST_VALUE0,
         ST_VALUE,
         ST_ERROR,
@@ -91,7 +91,7 @@ static const struct parser_state_transition *states [] = {
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
 
-static const size_t states_n [] = {        
+static size_t states_n [] = {        
         N(ST_VALUE0),
         N(ST_VALUE),
         N(ST_ERROR),
@@ -104,7 +104,7 @@ static struct parser_definition definition = {
         .start_state  = MIME_VALUE0,
 };
 
-const struct parser_definition *
+struct parser_definition *
 mime_value_parser(void) {
     return &definition;
 }

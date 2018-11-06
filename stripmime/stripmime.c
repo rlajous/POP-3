@@ -643,7 +643,9 @@ main(const int argc, const char **argv) {
     for(int i=0; i<MAX_BLACKLIST; i++) {
         ctx.blacklist[i] = calloc(MAX_STRING_LENGTH, sizeof(char));
         for(; j < strlen(blacklist_raw) && blacklist_raw[j] != ','; j++) {
-            nappend(ctx.blacklist[i], blacklist_raw[j], 1024);
+            if(blacklist_raw[j] != ' ' && blacklist_raw[j] != '\t') {
+                nappend(ctx.blacklist[i], blacklist_raw[j], 1024);
+            }
         }
         j++;
         if(ctx.blacklist_n == 0 && j >= strlen(blacklist_raw)) {
