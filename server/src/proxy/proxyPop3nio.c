@@ -1463,7 +1463,7 @@ open_transformation(struct selector_key * key) {
 
         set_environment(p);
 
-        int exec = execve("/bin/bash", args, NULL);
+        int exec = execv("/bin/bash", args);
         if (exec == -1) {
             exit(EXEC_FAIL);
         }
